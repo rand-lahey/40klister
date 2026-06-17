@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Necrons Army Builder</title>
+<style>
+  :root {
+    --bg: #0b0f0a;
+    --panel: #11160f;
+    --panel2: #161d12;
+    --border: #2d3b22;
+    --green: #6fdc3a;
+    --green-dim: #3a8a1f;
+    --text: #d8e6c8;
+    --text-dim: #8aa074;
+    --gold: #c9a93f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  header {
+    padding: 18px 24px;
+    border-bottom: 2px solid var(--green-dim);
+    background: linear-gradient(180deg, #141a10, #0b0f0a);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--green);
+    text-transform: uppercase;
+  }
+  header .faction-tag {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 1px;
+  }
+  .points-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+  }
+  .points-box label { font-size: 12px; color: var(--text-dim); }
+  .points-box input[type=number] {
+    width: 70px;
+    background: #0b0f0a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .points-total {
+    font-size: 18px;
+    font-weight: bold;
+  }
+  .points-total.over { color: #e25a3a; }
+  .points-total.ok { color: var(--green); }
+  main {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    align-items: flex-start;
+  }
+  .col {
+    flex: 1;
+    min-width: 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--panel2);
+    padding: 10px 14px;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+  }
+  .search-bar {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .search-bar input {
+    width: 100%;
+    padding: 7px 10px;
+    background: #0b0f0a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .category {
+    border-bottom: 1px solid var(--border);
+  }
+  .category-title {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--green);
+    background: #0e1310;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+  }
+  .category-title:hover { background: #15200f; }
+  .category-body { display: block; }
+  .category.collapsed .category-body { display: none; }
+  .category-title .arrow { color: var(--text-dim); font-size: 11px; }
+  .unit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 14px;
+    border-bottom: 1px solid #1a2215;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .unit-row:hover { background: #131a0e; }
+  .unit-row:last-child { border-bottom: none; }
+  .unit-row.maxed { opacity: 0.45; cursor: default; }
+  .unit-row.maxed:hover { background: none; }
+  .unit-info { flex: 1; min-width: 0; }
+  .unit-name { font-size: 13px; color: var(--text); }
+  .unit-sub { font-size: 11px; color: var(--text-dim); }
+  .unit-pts { font-size: 12px; color: var(--gold); white-space: nowrap; }
+  .unit-count {
+    font-size: 11px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1px 8px;
+    white-space: nowrap;
+  }
+  .unit-count.full { color: #e25a3a; border-color: #5a1f1f; }
+  .army-list { min-height: 200px; }
+  .army-empty {
+    padding: 30px 14px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .army-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid #1a2215;
+    gap: 8px;
+  }
+  .army-row .unit-info { flex: 1; }
+  .army-row .cat-badge {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .remove-btn {
+    background: #3a1414;
+    color: #e0a0a0;
+    border: none;
+    border-radius: 4px;
+    width: 26px;
+    height: 26px;
+    font-size: 14px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .remove-btn:hover { background: #5a1f1f; }
+  .army-footer {
+    padding: 14px;
+    border-top: 2px solid var(--border);
+    background: var(--panel2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .army-footer .label { font-size: 13px; color: var(--text-dim); }
+  .clear-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .clear-btn:hover { color: #e0a0a0; border-color: #5a1f1f; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .scroll { max-height: 640px; overflow-y: auto; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .overlay.hidden { display: none; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--green-dim);
+    border-radius: 8px;
+    width: 560px;
+    max-width: 92vw;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .modal-body { overflow-y: auto; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .stat-cell {
+    background: #0b0f0a;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: center;
+    padding: 6px 2px;
+  }
+  .stat-cell .stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; }
+  .stat-cell .stat-value { font-size: 15px; color: var(--green); font-weight: bold; }
+  .keyword-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .chip {
+    font-size: 10px;
+    color: var(--gold);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .section-title {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 14px 0 6px;
+  }
+  .ability-item { margin-bottom: 8px; }
+  .ability-item .ability-name { font-size: 12px; color: var(--text); font-weight: bold; }
+  .ability-item .ability-text { font-size: 11px; color: var(--text-dim); line-height: 1.4; white-space: pre-line; }
+  .weapon-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 6px; }
+  .weapon-table th, .weapon-table td { border: 1px solid var(--border); padding: 4px 6px; text-align: center; }
+  .weapon-table th { background: #0e1310; color: var(--gold); font-size: 10px; text-transform: uppercase; }
+  .weapon-table td:first-child, .weapon-table th:first-child { text-align: left; color: var(--text); }
+  .weapon-table td { color: var(--text-dim); }
+  .modal-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+    border-radius: 8px 8px 0 0;
+  }
+  .modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--green);
+  }
+  .modal-header .modal-cat { font-size: 11px; color: var(--gold); text-transform: uppercase; }
+  .modal-body { padding: 16px 18px; }
+  .modal-field { margin-bottom: 14px; }
+  .modal-field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .modal-field select {
+    width: 100%;
+    padding: 8px;
+    background: #0b0f0a;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .modal-price {
+    font-size: 22px;
+    color: var(--gold);
+    font-weight: bold;
+  }
+  .modal-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .modal-warn {
+    font-size: 12px;
+    color: #e25a3a;
+    margin-top: 8px;
+  }
+  .modal-footer {
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+  }
+  .btn:hover { color: var(--text); }
+  .btn-primary {
+    background: var(--green-dim);
+    border-color: var(--green-dim);
+    color: #0b0f0a;
+    font-weight: bold;
+  }
+  .btn-primary:hover { background: var(--green); }
+  .btn-primary:disabled {
+    background: #2d3b22;
+    color: #6a7a5e;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>40K Pts on the Cheap</h1>
+    <a class="back-link" href="index.html" style="font-size:11px;color:#8aa074;text-decoration:none;">&larr; Choose a different faction</a>
+    <div class="faction-tag">FACTION: NECRONS</div>
+  </div>
+  <div class="points-box">
+    <label>Points limit</label>
+    <input type="number" id="pointsLimit" value="2000" min="0" step="5">
+    <div class="points-total ok" id="totalDisplay">0 / 2000</div>
+  </div>
+</header>
+
+<main>
+  <div class="col">
+    <div class="panel">
+      <div class="panel-header">Available Units</div>
+      <div class="search-bar"><input type="text" id="searchInput" placeholder="Search units..."></div>
+      <div class="scroll" id="unitList"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="panel">
+      <div class="panel-header">Your Army List</div>
+      <div class="scroll army-list" id="armyList">
+        <div class="army-empty">No units added yet. Click a unit to add it.</div>
+      </div>
+      <div class="army-footer">
+        <span class="label" id="unitCount">0 units</span>
+        <button class="clear-btn" id="clearBtn">Clear army</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-cat" id="modalCat"></div>
+      <h2 id="modalName"></h2>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn btn-primary" id="modalAdd">Add to Army</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const UNITS = [{"name": "Annihilation Barge", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 95, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "8", "SV": "3+", "W": "9", "LD": "7+", "OC": "3"}, "keywords": ["Vehicle", "Fly", "Annihilation Barge"], "abilities": [{"name": "Malevolent Arcing", "text": "In your Shooting phase, each time you\u00a0select a target for this model\u2019s twin tesla destructor, roll one\u00a0D6 for the target unit and one D6 for every other enemy unit\u00a0within 3\" of the target unit. On a 5+, the unit being rolled for\u00a0is struck by arcing energies; after resolving all of this model\u2019s\u00a0attacks against the target unit, each unit struck by arcing\u00a0energies suffers D3 mortal wounds."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}], "rangedWeapons": [{"name": "Twin tesla destructor", "Range": "36\"", "A": "6", "BS": "3+", "S": "8", "AP": "0", "D": "2", "Keywords": "Sustained Hits 2, Twin-linked"}, {"name": "Gauss cannon", "Range": "24\"", "A": "3", "BS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "Lethal Hits"}, {"name": "Tesla cannon", "Range": "24\"", "A": "4", "BS": "3+", "S": "6", "AP": "0", "D": "1", "Keywords": "Sustained Hits 2"}], "meleeWeapons": []}}, {"name": "C'Tan Shard Of The Deceiver", "category": "Monsters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 330, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "11", "SV": "3+", "W": "16", "LD": "6+", "OC": "4"}, "keywords": ["Monster", "Character", "Epic Hero", "Fly", "C'tan Shard of the Deceiver"], "abilities": [{"name": "Grand Illusion", "text": "If your army includes this model, after both\u00a0players have deployed their armies, select up to three ^^**NECRONS^^** units from your army and redeploy them. When doing so, any of those units can be placed in Strategic Reserves, regardless of how many units are already in\u00a0Strategic Reserves."}, {"name": "Lord of Deceit (Aura)", "text": "Each time your opponent targets a unit from their army with a Stratagem, if that unit is within 12\" of this model, increase the cost of that use of that Stratagem by 1CP."}], "rangedWeapons": [{"name": "Cosmic insanity", "Range": "18\"", "A": "6", "BS": "2+", "S": "6", "AP": "-2", "D": "2", "Keywords": "Anti-CHARACTER 4+, Devastating Wounds, Precision"}], "meleeWeapons": [{"name": "Golden fists", "Range": "Melee", "A": "8", "WS": "2+", "S": "10", "AP": "-3", "D": "3", "Keywords": "-"}]}}, {"name": "C'Tan Shard Of The Nightbringer", "category": "Monsters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 360, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "11", "SV": "3+", "W": "16", "LD": "6+", "OC": "4"}, "keywords": ["Monster", "Character", "Epic Hero", "Fly", "C'tan Shard of the Nightbringer"], "abilities": [{"name": "Drain Life", "text": "At the end of the Fight phase, roll one D6 for each\u00a0enemy unit within 6\" of this model: on a 4+, that enemy unit\u00a0suffers D3 mortal wounds."}, {"name": "Quantum Goad", "text": "This model is eligible to declare a charge in a turn in which it Advanced."}], "rangedWeapons": [{"name": "Gaze of death", "Range": "18\"", "A": "D3", "BS": "2+", "S": "12", "AP": "-3", "D": "D6+3", "Keywords": "-"}], "meleeWeapons": [{"name": "\u27a4 Scythe of the Nightbringer - strike", "Range": "Melee", "A": "6", "WS": "2+", "S": "14", "AP": "-4", "D": "D6+2", "Keywords": "Devastating Wounds"}, {"name": "\u27a4 Scythe of the Nightbringer - sweep", "Range": "Melee", "A": "14", "WS": "2+", "S": "8", "AP": "-2", "D": "2", "Keywords": "-"}]}}, {"name": "C'Tan Shard Of The Void Dragon", "category": "Monsters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 345, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "11", "SV": "3+", "W": "16", "LD": "6+", "OC": "4"}, "keywords": ["Monster", "Character", "Epic Hero", "Fly", "C'tan Shard of the Void Dragon"], "abilities": [{"name": "Matter Absorption", "text": "At the start of your Shooting phase, select\u00a0one enemy ^^**VEHICLE^^** unit within 12\" of this model and roll one D6: on a 2+, that enemy unit suffers D3 mortal wounds and\u00a0this model regains up to that many lost wounds."}, {"name": "Animus Damper", "text": "Once per turn, at the start of your opponent\u2019s Shooting phase, select one enemy ^^**Vehicle^^** unit visible to the bearer. That unit must take a Leadership test. Until the end of the phase, each time a model in that unit makes an attack, subtract 1 from the Hit roll and, if that Leadership test was failed, subtract 1 from the Wound roll as well."}], "rangedWeapons": [{"name": "Spear of the Void Dragon", "Range": "12\"", "A": "D3", "BS": "2+", "S": "8", "AP": "-3", "D": "D6+2", "Keywords": "Anti-VEHICLE 2+"}, {"name": "Voltaic storm", "Range": "18\"", "A": "D6+3", "BS": "2+", "S": "7", "AP": "-1", "D": "2", "Keywords": "Blast, Sustained Hits 2"}], "meleeWeapons": [{"name": "\u27a4 Spear of the Void Dragon - strike", "Range": "Melee", "A": "5", "WS": "2+", "S": "12", "AP": "-4", "D": "D6+2", "Keywords": "Anti-VEHICLE 2+"}, {"name": "\u27a4 Spear of the Void Dragon - sweep", "Range": "Melee", "A": "10", "WS": "2+", "S": "8", "AP": "-1", "D": "2", "Keywords": "-"}, {"name": "Canoptek tail blades", "Range": "Melee", "A": "6", "WS": "2+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Extra Attacks"}]}}, {"name": "Canoptek Doomstalker", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 140, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "8", "SV": "3+", "W": "12", "LD": "8+", "OC": "4"}, "keywords": ["Vehicle", "Walker", "Canoptek", "Doomstalker"], "abilities": [{"name": "Damaged: 1-4 wounds remaining", "text": "While this model has 1-4 wounds remaining, each time this\u00a0model makes an attack, subtract 1 from the Hit roll."}, {"name": "Sentinel Construct", "text": "Each time you target this unit with the\u00a0Fire Overwatch Stratagem, while resolving that Stratagem, hits\u00a0are scored on unmodified Hit rolls of 5+."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}], "rangedWeapons": [{"name": "Doomsday blaster", "Range": "48\"", "A": "D6+1", "BS": "4+", "S": "14", "AP": "-3", "D": "3", "Keywords": "Blast, Heavy"}, {"name": "Twin gauss flayer", "Range": "24\"", "A": "1", "BS": "4+", "S": "4", "AP": "0", "D": "1", "Keywords": "Lethal Hits, Rapid Fire 1, Twin-linked"}], "meleeWeapons": [{"name": "Doomstalker limbs", "Range": "Melee", "A": "3", "WS": "4+", "S": "6", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Canoptek Macrocytes", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "5", "flat": 70, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "3", "SV": "4+", "W": "1", "LD": "8+", "OC": "1"}, "keywords": ["Beast", "Fly", "Canoptek", "Macrocytes"], "abilities": [{"name": "Harassment Swarm (Aura)", "text": "While an enemy unit (excluding ^^**Monsters^^** and ^^**Vehicles^^**) is within 3\" of this unit, each time a model in that unit makes an attack, subtract 1 from the Hit roll."}, {"name": "Nanoscarab Projector", "text": "Once per battle round, when a friendly ^^**Necrons^^** unit within 3\" of the bearer activates its Reanimation Protocols, the bearer can use this ability. If it does, that unit reanimates 1 additional wound."}, {"name": "Accelerator Mandible", "text": "At the start of the Fight phase, select one friendly ^^**Canoptek^^** unit within 3\" of the bearer\u2019s unit. Until the end of the phase, improve the Weapon Skill characteristic of weapons equipped by models in that unit by 1."}], "rangedWeapons": [{"name": "Atomiser beam", "Range": "12\"", "A": "1", "BS": "4+", "S": "6", "AP": "-1", "D": "1", "Keywords": "-"}, {"name": "Tesla caster", "Range": "18\"", "A": "1", "BS": "4+", "S": "5", "AP": "0", "D": "1", "Keywords": "Assault, Sustained Hits 1"}, {"name": "Gauss scalpel", "Range": "18\"", "A": "1", "BS": "4+", "S": "4", "AP": "-1", "D": "1", "Keywords": "Lethal Hits"}], "meleeWeapons": []}}, {"name": "Canoptek Reanimator", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 70, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "6", "SV": "3+", "W": "6", "LD": "8+", "OC": "3"}, "keywords": ["Vehicle", "Walker", "Canoptek", "Reanimator"], "abilities": [{"name": "Nanoscarab Reanimation Beam (Aura)", "text": "While a friendly\u00a0NECRONS unit is within 3\" of this model, each time that\u00a0unit\u2019s Reanimation Protocols activate, that unit reanimates an\u00a0additional D3 wounds."}], "rangedWeapons": [{"name": "Atomiser beam", "Range": "12\"", "A": "3", "BS": "4+", "S": "6", "AP": "-2", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Reanimator's claws", "Range": "Melee", "A": "4", "WS": "4+", "S": "5", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Canoptek Scarab Swarms", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "3", "flat": 40, "p1_2": null, "p3": null}, {"models": "6", "flat": 80, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "2", "SV": "6+", "W": "4", "LD": "8+", "OC": "0"}, "keywords": ["Swarm", "Fly", "Canoptek", "Scarab Swarms"], "abilities": [{"name": "Self-destruction", "text": "At the start of the Fight phase, if this unit is\u00a0within Engagement Range of one or more enemy units, you\u00a0can select one model in this unit to destroy. If you do, select\u00a0one enemy unit within Engagement Range of that model and\u00a0roll one D6, adding 1 to the result if that unit is a VEHICLE. On\u00a0a 2-5, that unit suffers D3 mortal wounds; on a 6+, that unit\u00a0suffers 3 mortal wounds."}, {"name": "Chittering Swarm", "text": "While an enemy unit is within Engagement Range of\u00a0this unit, subtract 1 from the Objective Control\u00a0 characteristic\u00a0of models in that enemy unit (to a minimum of 1). While this unit is within 6\" of one or more friendly CRYPTEK models, the Objective Control characteristic of models in this unit is 1."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Feeder mandibles", "Range": "Melee", "A": "6", "WS": "5+", "S": "2", "AP": "0", "D": "1", "Keywords": "Lethal Hits"}]}}, {"name": "Canoptek Spyders", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 65, "p1_2": null, "p3": null}, {"models": "2", "flat": 110, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "7", "SV": "3+", "W": "6", "LD": "8+", "OC": "2"}, "keywords": [], "abilities": [{"name": "Fabricator Claw Array (Aura)", "text": "While a friendly NECRONS VEHICLE\u00a0unit is within 6\" of the bearer, models in that unit have the\u00a0Feel No Pain 6+ ability."}], "rangedWeapons": [{"name": "Particle beamer", "Range": "18\"", "A": "D6", "BS": "3+", "S": "6", "AP": "0", "D": "1", "Keywords": "Blast, Devastating Wounds"}], "meleeWeapons": [{"name": "Automaton claws", "Range": "Melee", "A": "5", "WS": "4+", "S": "8", "AP": "-2", "D": "2", "Keywords": "-"}]}}, {"name": "Canoptek Tomb Crawlers", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": false, "sizes": [{"models": "2", "flat": 50, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "3+", "W": "3", "LD": "8+", "OC": "1"}, "keywords": ["Beast", "Canoptek", "Tomb Crawlers"], "abilities": [{"name": "Weapon Sentinels", "text": "Each time a model in this unit makes a ranged attack that targets a unit within 12\", you can ignore any or all modifiers to the following: that attack\u2019s Ballistic Skill characteristic; the Hit roll; the Wound roll."}, {"name": "Canoptek Retinue", "text": "At the start of the Declare Battle Formations step, this unit can join one other unit from your army that is being led by a ^^**Cryptek^^** model (a unit cannot have more than one ^^**Tomb Crawlers^^** unit joined to it and cannot have both a ^^**Tomb Crawlers^^** and a ^^**Cryptothralls^^** unit joined to it). If it does, until the end of the battle, every model in this unit counts as being part of that Bodyguard unit, and that Bodyguard unit\u2019s Starting Strength is increased accordingly."}], "rangedWeapons": [{"name": "Twin gauss reaper", "Range": "12\"", "A": "2", "BS": "4+", "S": "4", "AP": "-1", "D": "1", "Keywords": "Lethal Hits, Twin-linked"}, {"name": "Dimensional isolator", "Range": "12\"", "A": "2", "BS": "4+", "S": "4", "AP": "-2", "D": "2", "Keywords": "-"}], "meleeWeapons": [{"name": "Claws", "Range": "Melee", "A": "4", "WS": "4+", "S": "6", "AP": "-1", "D": "1", "Keywords": "-"}]}}, {"name": "Canoptek Wraiths", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": true, "sizes": [{"models": "3", "flat": null, "p1_2": 95, "p3": 115}, {"models": "6", "flat": null, "p1_2": 220, "p3": 240}], "datasheet": {"stats": {"M": "10\"", "T": "6", "SV": "3+", "W": "4", "LD": "8+", "OC": "2"}, "keywords": ["Beast", "Fly", "Canoptek", "Wraiths"], "abilities": [{"name": "Wraith Form", "text": "Each time this unit ends a Normal move, you can\u00a0select one enemy unit it moved over during that move and roll\u00a0one D6 for each model in this unit: for each 4+, that enemy\u00a0unit suffers 1 mortal wound."}, {"name": "Invulnerable Save", "text": "Models in this unit have a 4+ invulnerable save."}], "rangedWeapons": [], "meleeWeapons": []}}, {"name": "Catacomb Command Barge", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 120, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "8", "SV": "3+", "W": "9", "LD": "6+", "OC": "3"}, "keywords": ["Vehicle", "Character", "Fly", "Catacomb Command Barge"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Carrier Wave (Aura)", "text": "While a friendly NECRONS unit is within\u00a06\" of this model, add 1 to the Objective Control characteristic\u00a0of models in that unit."}, {"name": "Advanced Quantum Shielding", "text": "Each time an attack targets\u00a0this model, if the Strength characteristic of that attack is\u00a0greater than this model\u2019s Toughness characteristic, subtract 1\u00a0from the Wound roll."}, {"name": "Resurrection orb", "text": "Once per battle, at the end of any phase, select one friendly NECRONS INFANTRY or NECRONS MOUNTED unit within 6\" of the bearer and resurrect that unit. When you do, that unit\u2019s Reanimation Protocols are activated reanimating D6 wounds instead of D3 when doing so. You cannot resurrect more than one unit per turn."}], "rangedWeapons": [{"name": "Gauss cannon", "Range": "24\"", "A": "3", "BS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "Lethal Hits"}, {"name": "Tesla cannon", "Range": "24\"", "A": "4", "BS": "3+", "S": "6", "AP": "0", "D": "1", "Keywords": "Sustained Hits 2"}, {"name": "Staff of light", "Range": "18\"", "A": "3", "BS": "2+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Staff of light", "Range": "Melee", "A": "4", "WS": "3+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Chronomancer", "category": "Characters", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 80, "p3": 90}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Cryptek", "Chronomancer"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS\nYou can attach this model to one of the above units even\u00a0if one ROYAL WARDEN or NOBLE model has already been\u00a0attached to it. If you do, and that Bodyguard unit is destroyed,\u00a0the Leader units attached to it become separate units, with\u00a0their original Starting Strengths."}, {"name": "Timesplinter Mantle", "text": "While this model is leading a unit, each\u00a0time an attack targets that unit, subtract 1 from the Hit roll."}, {"name": "Chronometron", "text": "In your Shooting phase, after this model\u2019s unit\u00a0has shot, if it is not within Engagement Range of any enemy\u00a0units, that unit can make a Normal move of up to 5\". If it does, until the end of the\u00a0turn, that unit is not eligible to declare a charge."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}], "rangedWeapons": [{"name": "Chronomancer's stave", "Range": "18\"", "A": "D6", "BS": "4+", "S": "5", "AP": "-1", "D": "1", "Keywords": "Blast"}], "meleeWeapons": [{"name": "Chronomancer's stave", "Range": "Melee", "A": "3", "WS": "4+", "S": "5", "AP": "-1", "D": "1", "Keywords": "-"}]}}, {"name": "Convergence Of Dominion", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 60, "p1_2": null, "p3": null}, {"models": "2", "flat": 120, "p1_2": null, "p3": null}, {"models": "3", "flat": 180, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "-", "T": "9", "SV": "3+", "W": "7", "LD": "8+", "OC": "0"}, "keywords": ["Fortification", "Vehicle", "Convergence of Dominion"], "abilities": [{"name": "Reanimation Nodes (Aura)", "text": "While a friendly NECRONS INFANTRY unit\u00a0is within 6\u201d of this FORTIFICATION, models in that unit have the Feel No Pain 6+ ability."}, {"name": "Ancient Cover", "text": "Each time a ranged attack is allocated to a\u00a0model, if that model is not fully visible to every model in the\u00a0attacking unit because of this FORTIFICATION, that model has\u00a0the Benefit of Cover against that attack."}, {"name": "Deployment", "text": "When this unit is first set up on the battlefield, its models do\u00a0not have to be set up in Unit Coherency. Instead, each model\u00a0must be set up wholly within 12\" of one other model from its\u00a0unit. From that point on, each model in this unit is treated as\u00a0a separate unit."}], "rangedWeapons": [{"name": "Transdimensional abductor", "Range": "18\"", "A": "3", "BS": "4+", "S": "6", "AP": "-2", "D": "3", "Keywords": "-"}], "meleeWeapons": []}}, {"name": "Cryptothralls", "category": "Infantry", "epicHero": false, "hasScaling": false, "sizes": [{"models": "2", "flat": 60, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "3+", "W": "3", "LD": "8+", "OC": "1"}, "keywords": ["Infantry", "Cryptothralls"], "abilities": [{"name": "Bound Creation", "text": "While this unit is in the same unit as a CRYPTEK\u00a0model, that CRYPTEK model has the Feel No Pain\u00a04+ ability."}, {"name": "Systematic Vigour", "text": "Each time a CRYPTOTHRALL model in this unit is destroyed by a melee attack, if that model has not fought this phase, roll one D6: on a 2+, do not remove it from play. The destroyed model can fight after the attacking model\u2019s unit has finished making its attacks, and it is then removed from play."}, {"name": "Cryptek Retinue", "text": "At the start of the Declare Battle Formations step, this unit\u00a0can join one other unit from your army that is being led by a\u00a0CRYPTEK model (a unit cannot have more than one\u00a0CRYPTOTHRALLS unit joined to it). If it does, until the end of the\u00a0battle, every model in this unit counts as being part of that\u00a0Bodyguard unit, and that\u00a0 Bodyguard unit\u2019s Starting Strength is\u00a0increased accordingly."}], "rangedWeapons": [{"name": "Scouring eye", "Range": "6\"", "A": "2", "BS": "4+", "S": "5", "AP": "-1", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Scythed limbs", "Range": "Melee", "A": "4", "WS": "4+", "S": "5", "AP": "-1", "D": "1", "Keywords": "-"}]}}, {"name": "Deathmarks", "category": "Infantry", "epicHero": false, "hasScaling": true, "sizes": [{"models": "5", "flat": null, "p1_2": 60, "p3": 70}, {"models": "10", "flat": null, "p1_2": 120, "p3": 130}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "3+", "W": "1", "LD": "7+", "OC": "1"}, "keywords": ["Infantry", "Deathmarks"], "abilities": [{"name": "Hyperspace Hunters", "text": "Once per turn, in the Reinforcements\u00a0step of your opponent\u2019s Movement phase, when an enemy\u00a0unit is set up on the battlefield from Reserves within 18\"\u00a0of and visible to this unit, this unit can shoot as if it were\u00a0your Shooting phase, but must only target that enemy unit\u00a0when doing so, and can only do so if that enemy unit is an\u00a0eligible target."}], "rangedWeapons": [{"name": "Synaptic disintegrator", "Range": "36\"", "A": "1", "BS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "Heavy, Precision"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "2", "WS": "3+", "S": "4", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Doom Scythe", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 200, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "20+\"", "T": "9", "SV": "3+", "W": "12", "LD": "7+", "OC": "0"}, "keywords": ["Vehicle", "Aircraft", "Fly", "Doom Scythe"], "abilities": [{"name": "Atavistic Instigation", "text": "Each time this model targets an enemy unit with its heavy death ray, your opponent must\u00a0declare if that unit will stand firm or duck for cover:\n\u25a0 If it stands firm, when resolving attacks against that unit this phase, a successful unmodified Hit\u00a0roll of 5+ scores a Critical Hit.\n\u25a0 If it ducks for cover, until the start of your next Shooting\u00a0phase, each time a model in that unit makes an attack,\u00a0subtract 1 from the Hit roll."}, {"name": "Damaged: 1-4 wounds remaining", "text": "While this model has 1-4 wounds remaining, each time this\u00a0model makes an attack, subtract 1 from the Hit roll."}], "rangedWeapons": [{"name": "Heavy death ray", "Range": "36\"", "A": "3", "BS": "3+", "S": "16", "AP": "-4", "D": "D6+1", "Keywords": "Sustained Hits D3"}, {"name": "Twin tesla destructor", "Range": "36\"", "A": "6", "BS": "3+", "S": "8", "AP": "0", "D": "2", "Keywords": "Sustained Hits 2, Twin-linked"}], "meleeWeapons": []}}, {"name": "Doomsday Ark", "category": "Vehicles", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 200, "p3": 220}], "datasheet": {"stats": {"M": "10\"", "T": "9", "SV": "3+", "W": "14", "LD": "7+", "OC": "5"}, "keywords": ["Vehicle", "Fly", "Doomsday Ark"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Damaged: 1-5 wounds remaining", "text": "While this model has 1-5 wounds remaining, each time this\u00a0model makes an attack, subtract 1 from the Hit roll."}, {"name": "Overwhelming Obliteration", "text": "In your Movement phase, if\u00a0this model Remains Stationary, until the end of the turn, its\u00a0doomsday cannon has the [DEVASTATING WOUNDS] ability."}], "rangedWeapons": [{"name": "Doomsday cannon", "Range": "72\"", "A": "D6+1", "BS": "3+", "S": "18", "AP": "-4", "D": "4", "Keywords": "Blast, Heavy"}, {"name": "Gauss flayer array", "Range": "24\"", "A": "5", "BS": "3+", "S": "4", "AP": "0", "D": "1", "Keywords": "Lethal Hits, Rapid Fire 5"}], "meleeWeapons": []}}, {"name": "Flayed Ones", "category": "Infantry", "epicHero": false, "hasScaling": false, "sizes": [{"models": "5", "flat": 55, "p1_2": null, "p3": null}, {"models": "10", "flat": 100, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "1", "LD": "7+", "OC": "1"}, "keywords": ["Infantry", "Flayed Ones"], "abilities": [{"name": "Flesh Hunger", "text": "Each time a model in this unit makes a melee\u00a0attack, if the target of that attack is Below Half-strength, a\u00a0successful Hit roll scores a Critical Hit."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Flayer claws", "Range": "Melee", "A": "4", "WS": "3+", "S": "4", "AP": "-1", "D": "1", "Keywords": "Sustained Hits 1, Twin-linked"}]}}, {"name": "Geomancer", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 75, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Cryptek", "Geomancer"], "abilities": [{"name": "Tectonic Reverberations", "text": "In your Movement phase, you can select one enemy unit within 18\" of and visible to this model. Until the start of your next Movement phase that enemy unit is pinned. While a unit is pinned, subtract 2 from that unit\u2019s Move characteristic and subtract 2 from Charge rolls made for it."}, {"name": "Obelisk Node Control", "text": "While this model is within range of an objective marker you control, enemy units that are set up on the battlefield from Reserves cannot be set up within 12\" of this model."}, {"name": "Leader", "text": "This model can be attached to the following units: ^^**Canoptek Macrocytes, Immortals, Necron Warriors^^**.\u00a0\n\n\n*You can attach this model to one of the above units even if one ^^**Royal Warden^^** or ^^**Noble^^** model has already been attached to it. If you do, and that Bodyguard unit is destroyed, the Leader units attached to it become separate units, with their original Starting Strengths.*"}], "rangedWeapons": [{"name": "\u27a4 Tremorglaive - reverberating beam", "Range": "18\"", "A": "2", "BS": "4+", "S": "8", "AP": "-2", "D": "2", "Keywords": "Melta 2"}, {"name": "\u27a4 Tremorglaive - shock wave pulse", "Range": "18\"", "A": "D6+2", "BS": "N/A", "S": "4", "AP": "0", "D": "1", "Keywords": "Ignores Cover, Torrent"}], "meleeWeapons": [{"name": "Tremorglaive", "Range": "Melee", "A": "2", "WS": "4+", "S": "8", "AP": "-2", "D": "2", "Keywords": "-"}]}}, {"name": "Ghost Ark", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 100, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "9", "SV": "3+", "W": "14", "LD": "7+", "OC": "3"}, "keywords": ["Vehicle", "Fly", "Transport", "Dedicated Transport", "Ghost Ark"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Repair Barge", "text": "Once per turn, just after an enemy unit\u00a0finishes making its attacks, if one or more friendly NECRON WARRIORS\u00a0units within 3\" of this model lost one or more\u00a0wounds as a result of those attacks, this model can use this\u00a0ability. If it does, select one of those NECRON WARRIORS units;\u00a0that unit\u2019s Reanimation Protocols activate. The same NECRON WARRIORS\u00a0unit cannot be selected for this ability more than\u00a0once per turn."}], "rangedWeapons": [{"name": "Gauss flayer array", "Range": "24\"", "A": "5", "BS": "3+", "S": "4", "AP": "0", "D": "1", "Keywords": "Lethal Hits, Rapid Fire 5"}], "meleeWeapons": []}}, {"name": "Hexmark Destroyer", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 75, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "5", "SV": "3+", "W": "5", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Destroyer Cult", "Hexmark Destroyer"], "abilities": [{"name": "Inescapable Death", "text": "Once per turn, one unit from your army\u00a0with this ability can be targeted with the Fire Overwatch\u00a0Stratagem for 0CP, even if you have already used that\u00a0Stratagem on a different unit this phase. In addition, each\u00a0time you target this unit with the Fire Overwatch Stratagem,\u00a0while resolving that Stratagem, hits are scored on unmodified\u00a0Hit rolls of 2+."}, {"name": "Multi-threat Eliminator", "text": "Once per turn, in your opponent's Shooting phase, when an enemy unit makes a ranged attack that targets a friendly NECRONS unit within 3\" of a model with this ability, after that enemy has shot, one model with this ability that is within 3\" of that target can shoot as if it were your Shooting phase, but must target that enemy unit when doing so, and can only do so if that enemy unit is an eligible target."}], "rangedWeapons": [{"name": "Enmitic disintegrator pistols", "Range": "18\"", "A": "6", "BS": "2+", "S": "6", "AP": "-2", "D": "1", "Keywords": "Ignores Cover, Pistol"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "4", "WS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Illuminor Szeras", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 175, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "8", "SV": "2+", "W": "9", "LD": "6+", "OC": "3"}, "keywords": ["Infantry", "Character", "Epic Hero", "Cryptek", "Illuminor Szeras"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Illuminor", "text": "While this model is within 3\" of one or more\u00a0other friendly NECRONS units, this model has the Lone\u00a0Operative ability."}, {"name": "Mechanical Augmentation (Aura)", "text": "While a friendly NECRONS BATTLELINE\u00a0unit is within 3\" of this model, each time a model\u00a0in that unit makes an attack, improve the Armour Penetration\u00a0characteristic of that attack by 1, and each time an attack\u00a0targets that unit, worsen the Armour Penetration characteristic\u00a0of that attack by 1."}, {"name": "Atomic Energy Manipulator", "text": "At the end of the Fight phase, if\u00a0this model destroyed one or more models this phase, until\u00a0the end of the battle, add 3\" to the range of its Mechanical\u00a0Augmentation ability (to a maximum of 12\")."}], "rangedWeapons": [{"name": "Eldritch lance", "Range": "36\"", "A": "3", "BS": "3+", "S": "9", "AP": "-3", "D": "3", "Keywords": "-"}], "meleeWeapons": [{"name": "Eldritch lance", "Range": "Melee", "A": "4", "WS": "3+", "S": "9", "AP": "-3", "D": "3", "Keywords": "-"}, {"name": "Impaling legs", "Range": "Melee", "A": "4", "WS": "3+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Extra Attacks"}]}}, {"name": "Immortals", "category": "Battleline", "epicHero": false, "hasScaling": false, "sizes": [{"models": "5", "flat": 70, "p1_2": null, "p3": null}, {"models": "10", "flat": 140, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "3+", "W": "1", "LD": "7+", "OC": "2"}, "keywords": ["Infantry", "Battleline", "Immortals"], "abilities": [{"name": "Implacable Eradication", "text": "Each time a model in this unit makes\u00a0an attack, re-roll a Wound roll of 1. If the target of that attack\u00a0is an enemy unit within range of an objective marker, you can\u00a0re-roll the Wound roll instead."}], "rangedWeapons": [{"name": "Gauss blaster", "Range": "24\"", "A": "2", "BS": "3+", "S": "5", "AP": "-1", "D": "1", "Keywords": "Lethal Hits"}, {"name": "Tesla carbine", "Range": "24\"", "A": "2", "BS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "Assault, Sustained Hits 2"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "2", "WS": "3+", "S": "4", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Imotekh The Stormlord", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 100, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "2+", "W": "6", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Epic Hero", "Noble", "Imotekh the Stormlord"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 LYCHGUARD\n\u25a0 NECRON WARRIORS"}, {"name": "Grand Strategist", "text": "At the start of your Command phase, if this\u00a0model is on the battlefield, you gain 1CP."}, {"name": "Lord of the Storm", "text": "Once per battle, at the end of your\u00a0Command phase, this model can use this ability. If it does, roll\u00a0one D6 for each enemy unit within 12\" of this model: on a 2-5,\u00a0that enemy unit suffers D3 mortal wounds; on a 6, that enemy\u00a0unit suffers D3+3 mortal wounds."}], "rangedWeapons": [{"name": "Gauntlet of Fire", "Range": "12\"", "A": "D6", "BS": "N/A", "S": "5", "AP": "-1", "D": "1", "Keywords": "Ignores Cover, Torrent"}, {"name": "Staff of the Destroyer", "Range": "18\"", "A": "3", "BS": "2+", "S": "6", "AP": "-3", "D": "2", "Keywords": "-"}], "meleeWeapons": [{"name": "Staff of the Destroyer", "Range": "Melee", "A": "4", "WS": "2+", "S": "6", "AP": "-3", "D": "2", "Keywords": "Devastating Wounds"}]}}, {"name": "Lokhust Destroyers", "category": "Destroyer Cult", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 40, "p3": 50}, {"models": "2", "flat": null, "p1_2": 55, "p3": 65}, {"models": "3", "flat": null, "p1_2": 80, "p3": 90}, {"models": "6", "flat": null, "p1_2": 160, "p3": 170}], "datasheet": {"stats": {"M": "8\"", "T": "6", "SV": "3+", "W": "3", "LD": "7+", "OC": "2"}, "keywords": ["Mounted", "Fly", "Destroyer Cult", "Lokhust Destroyers"], "abilities": [{"name": "Hard-wired for Destruction", "text": "Each time a model in this unit\u00a0makes a ranged attack that targets the closest eligible enemy unit,\u00a0re-roll a Hit roll of 1. If the target of that attack is within range of an objective marker your opponent controls, you can re-roll the Hit roll instead."}], "rangedWeapons": [{"name": "Gauss cannon", "Range": "24\"", "A": "3", "BS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "Lethal Hits"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "2", "WS": "3+", "S": "4", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Lokhust Heavy Destroyers", "category": "Destroyer Cult", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 50, "p3": 60}, {"models": "2", "flat": null, "p1_2": 100, "p3": 110}, {"models": "3", "flat": null, "p1_2": 150, "p3": 160}], "datasheet": {"stats": {"M": "8\"", "T": "6", "SV": "3+", "W": "4", "LD": "7+", "OC": "2"}, "keywords": ["Mounted", "Fly", "Destroyer Cult", "Lokhust Heavy Destroyers"], "abilities": [{"name": "Optimised for Slaughter", "text": "Each time a model in this unit\u00a0makes an attack with an enmitic exterminator that targets a unit (excluding MONSTERS and VEHICLES), re-roll a Wound roll of 1. Each time a model in\u00a0this unit makes an attack with a gauss destructor against a\u00a0MONSTER or VEHICLE unit, re-roll a Wound roll of 1."}], "rangedWeapons": [{"name": "Enmitic exterminator", "Range": "36\"", "A": "6", "BS": "3+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Heavy, Rapid Fire 6, Sustained Hits 1"}, {"name": "Gauss destructor", "Range": "48\"", "A": "1", "BS": "3+", "S": "14", "AP": "-4", "D": "6", "Keywords": "Heavy, Lethal Hits"}], "meleeWeapons": []}}, {"name": "Lokhust Lord", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 70, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "6", "SV": "3+", "W": "6", "LD": "6+", "OC": "2"}, "keywords": ["Mounted", "Character", "Fly", "Destroyer Cult", "Lokhust Lord"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 LOKHUST DESTROYERS\n\u25a0 LOKHUST HEAVY DESTROYERS"}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Destroyer Cult", "text": "While this model is leading a unit, each time\u00a0a model in that unit makes a ranged attack, a successful\u00a0unmodifed Hit roll of 5+ scores a Critical Hit."}, {"name": "Driven by Hatred", "text": "Each time this model makes an attack that\u00a0targets an enemy unit that is Below Half-strength, you can\u00a0re-roll the Hit roll and you can re-roll the Wound roll."}, {"name": "Nanoscarab amulet", "text": "The bearer has the Feel No Pain 5+ ability."}], "rangedWeapons": [{"name": "Staff of light", "Range": "18\"", "A": "3", "BS": "2+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Lord's blade", "Range": "Melee", "A": "4", "WS": "2+", "S": "8", "AP": "-3", "D": "2", "Keywords": "Devastating Wounds"}, {"name": "Staff of light", "Range": "Melee", "A": "4", "WS": "2+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Lychguard", "category": "Infantry", "epicHero": false, "hasScaling": false, "sizes": [{"models": "5", "flat": 80, "p1_2": null, "p3": null}, {"models": "10", "flat": 160, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "3+", "W": "2", "LD": "7+", "OC": "1"}, "keywords": ["Infantry", "Lychguard"], "abilities": [{"name": "Dispersion Shield", "text": "The bearer has a 4+ invulnerable save."}, {"name": "Guardian Protocols", "text": "While a NOBLE model is leading this\u00a0unit, each time an attack targets this unit, if the Strength characteristic of that attack is greater than the Toughness characteristic of this unit, subtract 1 from the Wound roll."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Warscythe", "Range": "Melee", "A": "2", "WS": "3+", "S": "8", "AP": "-3", "D": "2", "Keywords": "Devastating Wounds"}, {"name": "Hyperphase sword", "Range": "Melee", "A": "3", "WS": "3+", "S": "6", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Monolith", "category": "Vehicles", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 420, "p3": 440}], "datasheet": {"stats": {"M": "8\"", "T": "13", "SV": "2+", "W": "22", "LD": "7+", "OC": "8"}, "keywords": ["Vehicle", "Titanic", "Fly", "Towering", "Monolith"], "abilities": [{"name": "Damaged: 1-7 wounds remaining", "text": "While this model has 1-7 wounds remaining, subtract 4 from\u00a0its Objective Control characteristic and each time this model\u00a0makes an attack, subtract 1 from the Hit roll."}, {"name": "Eternity Gate", "text": "In the Reinforcements step of your Movement\u00a0phase, you can select one NECRONS INFANTRY unit from your\u00a0army that is either in Reserves or on the battlefield (if you select the latter, remove that unit from the battlefield and\u00a0place it into Reserves). That unit is then set up anywhere on\u00a0the battlefield that is wholly within 6\" of this model and not\u00a0within Engagement Range of any enemy models. That unit\u00a0cannot declare a charge this turn."}], "rangedWeapons": [{"name": "Particle whip", "Range": "24\"", "A": "3D6", "BS": "3+", "S": "8", "AP": "-1", "D": "2", "Keywords": "Blast, Devastating Wounds"}, {"name": "Death ray", "Range": "24\"", "A": "1", "BS": "3+", "S": "12", "AP": "-4", "D": "D6+1", "Keywords": "Sustained Hits D3"}, {"name": "Gauss flux arc", "Range": "24\"", "A": "3", "BS": "3+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Lethal Hits, Rapid Fire 3"}], "meleeWeapons": [{"name": "Portal of exile", "Range": "Melee", "A": "6", "WS": "2+", "S": "8", "AP": "-2", "D": "3", "Keywords": "-"}]}}, {"name": "Necron Warriors", "category": "Battleline", "epicHero": false, "hasScaling": false, "sizes": [{"models": "10", "flat": 80, "p1_2": null, "p3": null}, {"models": "20", "flat": 190, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "1", "LD": "7+", "OC": "2"}, "keywords": ["Infantry", "Battleline", "Necron Warriors"], "abilities": [{"name": "Their Number is Legion", "text": "Each time this unit\u2019s Reanimation\u00a0Protocols activate, you can re-roll the dice to see how many wounds are regenerated."}], "rangedWeapons": [{"name": "Gauss flayer", "Range": "24\"", "A": "1", "BS": "4+", "S": "4", "AP": "0", "D": "1", "Keywords": "Lethal Hits, Rapid Fire 1"}, {"name": "Gauss reaper", "Range": "12\"", "A": "2", "BS": "4+", "S": "4", "AP": "-1", "D": "1", "Keywords": "Lethal Hits"}], "meleeWeapons": []}}, {"name": "Nekrosor Ammentar", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 175, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "8", "SV": "3+", "W": "9", "LD": "6+", "OC": "3"}, "keywords": ["Infantry", "Character", "Epic Hero", "Destroyer Cult", "Nekrosor Ammentar"], "abilities": [{"name": "Invulnerable Save (4+)", "text": "This model has a 4+ invulnerable save."}, {"name": "Protective Disciples", "text": "While this model is within 3\" of one or more other friendly ^^**Destroyer Cult^^** units, this model has the Lone Operative ability."}, {"name": "Infectious Murder\u2011madness (Aura)", "text": "While a friendly ^^**Necrons^^** unit (excluding ^^**Monster**^^ and ^^**Titanic^^** units) is within 6\" of this model, each time a model in that unit makes an attack, if that model has the ^^**Destroyer Cult^^** keyword or that enemy unit is the closest eligible target, that attack has the [SUSTAINED HITS 1] ability."}, {"name": "Prophet of Destruction", "text": "Each time this model destroys an enemy unit, select one other friendly ^^**Destroyer Cult^^** unit within 9\" of it. Until the end of the phase, each time a model in that unit makes an attack, re\u2011roll a Wound roll of 1."}, {"name": "Nullstone Field Generator (Aura)", "text": "While a friendly ^^**Necrons^^** unit is within 6\" of the bearer, models in that unit have the Feel No Pain 5+ ability against mortal wounds and Psychic Attacks."}], "rangedWeapons": [{"name": "Enmitic disintegrators", "Range": "18\"", "A": "4", "BS": "2+", "S": "6", "AP": "-2", "D": "1", "Keywords": "Ignores Cover, Pistol, Sustained Hits 2"}], "meleeWeapons": [{"name": "Blade tail and whip coils", "Range": "Melee", "A": "6", "WS": "2+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Extra Attacks"}, {"name": "Unmaker gauntlet", "Range": "Melee", "A": "6", "WS": "2+", "S": "10", "AP": "-3", "D": "3", "Keywords": "-"}]}}, {"name": "Night Scythe", "category": "Vehicles", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 125, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "20+\"", "T": "9", "SV": "3+", "W": "12", "LD": "7+", "OC": "0"}, "keywords": ["Vehicle", "Aircraft", "Fly", "Transport", "Night Scythe"], "abilities": [{"name": "Invasion Beams", "text": "At the end of the Fight phase, if there\u00a0are no models currently embarked within this TRANSPORT, you\u00a0can select one friendly NECRONS INFANTRY unit wholly within\u00a06\" of this TRANSPORT. Unless that unit is within Engagement\u00a0Range of one or more enemy units, it can embark within\u00a0this TRANSPORT."}, {"name": "Damaged: 1-4 wounds remaining", "text": "While this model has 1-4 wounds remaining, each time this\u00a0model makes an attack, subtract 1 from the Hit roll."}, {"name": "Quantum Invader", "text": "This model can be set up in the Reinforcements step of your first, second or third Movement phase, regardless of any mission rules."}], "rangedWeapons": [{"name": "Twin tesla destructor", "Range": "36\"", "A": "6", "BS": "3+", "S": "8", "AP": "0", "D": "2", "Keywords": "Sustained Hits 2, Twin-linked"}], "meleeWeapons": []}}, {"name": "Obelisk", "category": "Vehicles", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 280, "p3": 310}], "datasheet": {"stats": {"M": "8\"", "T": "13", "SV": "2+", "W": "24", "LD": "7+", "OC": "8"}, "keywords": ["Vehicle", "Titanic", "Fly", "Towering", "Obelisk"], "abilities": [{"name": "Damaged: 1-8 wounds remaining", "text": "While this model has 1-8 wounds remaining, subtract 4 from\u00a0its Objective Control characteristic and each time this model\u00a0makes an attack, subtract 1 from the Hit roll."}, {"name": "Gravitic Pulse", "text": "At the start of your opponent\u2019s Movement\u00a0phase, you can select one enemy unit within 18\" of and\u00a0visible to this model. Until the end of the turn, halve the Move characteristic of models in that unit and halve Advance and Charge rolls made for that unit. In addition, if that unit can FLY, until the start of your next\u00a0Movement phase, roll one D6 each time that unit ends any\u00a0type of move: on a 4+, that unit suffers D3 mortal wounds."}], "rangedWeapons": [{"name": "Tesla sphere", "Range": "24\"", "A": "6", "BS": "3+", "S": "7", "AP": "0", "D": "1", "Keywords": "Anti-FLY 4+, Sustained Hits 2"}], "meleeWeapons": [{"name": "Armoured bulk", "Range": "Melee", "A": "6", "WS": "4+", "S": "8", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Ophydian Destroyers", "category": "Destroyer Cult", "epicHero": false, "hasScaling": true, "sizes": [{"models": "3", "flat": null, "p1_2": 80, "p3": 90}, {"models": "6", "flat": null, "p1_2": 145, "p3": 155}], "datasheet": {"stats": {"M": "10\"", "T": "5", "SV": "4+", "W": "3", "LD": "7+", "OC": "2"}, "keywords": ["Infantry", "Destroyer Cult", "Ophydian Destroyers"], "abilities": [{"name": "Tunnelling Horrors", "text": "At the end of your opponent\u2019s turn, if this\u00a0unit is not within Engagement Range of one or more enemy units, you can remove this unit from the battlefield. In the\u00a0Reinforcements step of your next Movement phase, set it up\u00a0anywhere on the battlefield that is more than 9\" horizontally\u00a0away from all enemy models."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Ophydian hyperphase weapons", "Range": "Melee", "A": "5", "WS": "3+", "S": "4", "AP": "-2", "D": "2", "Keywords": "-"}]}}, {"name": "Orikan The Diviner", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 90, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Epic Hero", "Cryptek", "Chronomancer", "Orikan the Diviner"], "abilities": [{"name": "Master Chronomancer", "text": "While this model is leading a unit,\u00a0models in that unit have a 4+ invulnerable save."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "The Stars Are Right", "text": "Once per battle, at the start of the Fight\u00a0phase, this model can use this ability. If it does, until the end\u00a0of the phase, triple the Attacks and Strength characteristics of\u00a0this model\u2019s Staff of Tomorrow and every successful Wound\u00a0roll made for this model\u2019s attacks scores a Critical Wound."}, {"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS\nYou can attach this model to one of the above units even\u00a0if one ROYAL WARDEN or NOBLE model has already been\u00a0attached to it. If you do, and that Bodyguard unit is destroyed,\u00a0the Leader units attached to it become separate units, with\u00a0their original Starting Strengths."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Staff of Tomorrow", "Range": "Melee", "A": "2", "WS": "3+", "S": "4", "AP": "-3", "D": "D3", "Keywords": "Devastating Wounds"}]}}, {"name": "Overlord", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 90, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "2+", "W": "6", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Noble", "Overlord"], "abilities": [{"name": "Implacable Resilience", "text": "Each time an attack is allocated to this\u00a0model, subtract 1 from that attack\u2019s Damage characteristic."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 LYCHGUARD\n\u25a0 NECRON WARRIORS"}], "rangedWeapons": [{"name": "Staff of light", "Range": "18\"", "A": "3", "BS": "2+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Voidscythe", "Range": "Melee", "A": "3", "WS": "3+", "S": "12", "AP": "-3", "D": "3", "Keywords": "Devastating Wounds"}, {"name": "Staff of light", "Range": "Melee", "A": "4", "WS": "2+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Overlord With Translocation Shroud", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 90, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "2+", "W": "6", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Noble", "Overlord", "Overlord with Translocation Shroud"], "abilities": [{"name": "Translocation Shroud", "text": "Each time this model's unit Advances, do not make an Advance roll for it. Instead, until the end of the phase, add 6\" to the Move characteristic of models in that unit. In addition, each time a model in that unit makes a Normal, Advance or Fall Back move, until that move is finished, it can move horizontally through models and terrain features (it cannot finish a move on top of another model or its base)."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 LYCHGUARD\n\u25a0 NECRON WARRIORS"}], "rangedWeapons": [], "meleeWeapons": []}}, {"name": "Plasmancer", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 55, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Cryptek", "Plasmancer"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS\nYou can attach this model to one of the above units even\u00a0if one ROYAL WARDEN or NOBLE model has already been\u00a0attached to it. If you do, and that Bodyguard unit is destroyed,\u00a0the Leader units attached to it become separate units, with\u00a0their original Starting Strengths."}, {"name": "Harbinger of Destruction", "text": "While this model is leading a unit,\u00a0each time a model in that unit makes a ranged attack, a\u00a0successful unmodifed Hit roll of 5+ scores a Critical Hit."}, {"name": "Living Lightning", "text": "In your Shooting phase, select one enemy\u00a0unit within 18\" of and visible to this model (excluding units with the Lone Operative ability that are not part of an Attached unit and are not within 12\" of this model) and roll four D6: for each 4+, that enemy unit suffers 1\u00a0mortal wound."}], "rangedWeapons": [{"name": "Plasmic lance", "Range": "18\"", "A": "3", "BS": "4+", "S": "7", "AP": "-3", "D": "2", "Keywords": "-"}], "meleeWeapons": [{"name": "Plasmic lance", "Range": "Melee", "A": "2", "WS": "4+", "S": "7", "AP": "-3", "D": "2", "Keywords": "-"}]}}, {"name": "Psychomancer", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 55, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Cryptek", "Psychomancer"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS\nYou can attach this model to one of the above units even\u00a0if one ROYAL WARDEN or NOBLE model has already been\u00a0attached to it. If you do, and that Bodyguard unit is destroyed,\u00a0the Leader units attached to it become separate units, with\u00a0their original Starting Strengths."}, {"name": "Nightmare Shroud (Aura)", "text": "In the Battle-shock step of your opponent's Command phase, if an enemy unit that is below its Starting Strength is within 6\" of this model, that enemy unit must take a Battle-shock test, subtracting 1 from the roll when it does so."}, {"name": "Harbinger of Despair", "text": "Once per turn, at the start of your Command, Movement, Shooting, Charge or Fight phase, you can select one enemy unit within 18\" of this model. That unit must take a Battle-shock test, subtracting 1 from the roll when it does so."}], "rangedWeapons": [{"name": "Abyssal lance", "Range": "18\"", "A": "1", "BS": "4+", "S": "6", "AP": "-3", "D": "3", "Keywords": "-"}], "meleeWeapons": [{"name": "Abyssal lance", "Range": "Melee", "A": "1", "WS": "4+", "S": "6", "AP": "-3", "D": "3", "Keywords": "-"}]}}, {"name": "Royal Warden", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 50, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "3+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Royal Warden"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS"}, {"name": "Adaptive Strategy", "text": "This model's unit is eligible to shoot and declare a charge in a turn in which it Fell Back."}, {"name": "Engrammatic Logic", "text": "Once per battle, at the start of any\u00a0phase, you can select one friendly NECRONS unit that is\u00a0Battle-shocked and within 12\" of this model. That unit is no\u00a0longer Battle-shocked."}], "rangedWeapons": [{"name": "Relic gauss blaster", "Range": "24\"", "A": "2", "BS": "3+", "S": "5", "AP": "-1", "D": "2", "Keywords": "Lethal Hits, Rapid Fire 2"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "4", "WS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Seraptek Heavy Construct", "category": "Canoptek Constructs", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 540, "p3": 570}], "datasheet": {"stats": {"M": "10\"", "T": "12", "SV": "3+", "W": "24", "LD": "7+", "OC": "10"}, "keywords": ["Vehicle", "Walker", "Titanic", "Towering", "Seraptek Heavy Construct"], "abilities": [{"name": "Terrifying Monstrosity", "text": "At the start of the Fight phase, each\u00a0enemy unit within Engagement Range of one or more units\u00a0with this ability must take a Battle-shock test."}, {"name": "Damaged: 1-9 wounds remaining", "text": "While this model has 1-9 wounds remaining, subtract 5 from\u00a0this model\u2019s Objective Control characteristic and each time\u00a0this model makes an attack, subtract 1 from the Hit roll."}, {"name": "Invulnerable Save", "text": "This model has a 5+ invulnerable save."}], "rangedWeapons": [{"name": "Singularity generator", "Range": "36\"", "A": "2D6", "BS": "3+", "S": "10", "AP": "-3", "D": "4", "Keywords": "Blast, Devastating Wounds"}, {"name": "Synaptic obliterator", "Range": "48\"", "A": "8", "BS": "3+", "S": "5", "AP": "-1", "D": "2", "Keywords": "Sustained Hits 2"}, {"name": "Transdimensional projector", "Range": "48\"", "A": "2", "BS": "3+", "S": "24", "AP": "-4", "D": "D6+4", "Keywords": "-"}], "meleeWeapons": [{"name": "\u27a4 Titanic forelimbs - strike", "Range": "Melee", "A": "6", "WS": "3+", "S": "14", "AP": "-3", "D": "5", "Keywords": "-"}, {"name": "\u27a4 Titanic forelimbs - sweep", "Range": "Melee", "A": "12", "WS": "3+", "S": "8", "AP": "-1", "D": "2", "Keywords": "-"}]}}, {"name": "Skorpekh Destroyers", "category": "Destroyer Cult", "epicHero": false, "hasScaling": true, "sizes": [{"models": "3", "flat": null, "p1_2": 85, "p3": 95}, {"models": "6", "flat": null, "p1_2": 170, "p3": 180}], "datasheet": {"stats": {"M": "8\"", "T": "6", "SV": "3+", "W": "3", "LD": "7+", "OC": "2"}, "keywords": ["Infantry", "Destroyer Cult", "Skorpekh Destroyers"], "abilities": [{"name": "Whirling Onslaught", "text": "Each time a model in this unit makes\u00a0a melee attack, re-roll a Hit roll of 1. If this unit made a Charge move this turn, you can re-roll the Hit roll instead."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Skorpekh hyperphase weapons", "Range": "Melee", "A": "4", "WS": "3+", "S": "7", "AP": "-2", "D": "2", "Keywords": "-"}]}}, {"name": "Skorpekh Lord", "category": "Characters", "epicHero": false, "hasScaling": false, "sizes": [{"models": "1", "flat": 90, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "7", "SV": "3+", "W": "7", "LD": "6+", "OC": "2"}, "keywords": ["Infantry", "Character", "Destroyer Cult", "Skorpekh Lord"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 SKORPEKH DESTROYERS"}, {"name": "United In Destruction", "text": "While this model is leading a unit,\u00a0melee weapons equipped by models in that unit have the\u00a0[LETHAL HITS] ability."}, {"name": "Crimson Harvest", "text": "Each time this model ends a Charge move,\u00a0select one enemy unit within Engagement Range of this\u00a0model and roll one D6: on a 2-5, that unit suffers D3 mortal\u00a0wounds; on a 6, that unit suffers D3+3 mortal wounds."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}], "rangedWeapons": [{"name": "Enmitic annihilator", "Range": "18\"", "A": "2", "BS": "2+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Rapid Fire 2"}], "meleeWeapons": [{"name": "Flensing claw", "Range": "Melee", "A": "8", "WS": "2+", "S": "6", "AP": "-1", "D": "1", "Keywords": "-"}, {"name": "Hyperphase harvester", "Range": "Melee", "A": "4", "WS": "2+", "S": "10", "AP": "-3", "D": "3", "Keywords": "-"}]}}, {"name": "Technomancer", "category": "Characters", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 80, "p3": 90}], "datasheet": {"stats": {"M": "10\"", "T": "4", "SV": "4+", "W": "4", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Fly", "Cryptek", "Technomancer"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 CANOPTEK WRAITHS\n\u25a0 IMMORTALS\n\u25a0 NECRON WARRIORS\nYou can attach this model to one of the above units even\u00a0if one ROYAL WARDEN or NOBLE model has already been\u00a0attached to it. If you do, and that Bodyguard unit is destroyed,\u00a0the Leader units attached to it become separate units, with\u00a0their original Starting Strengths."}, {"name": "Rites of Reanimation", "text": "While this model is leading a unit,\u00a0models in that unit have the Feel No Pain 5+ ability."}, {"name": "Technomancer", "text": "At the end of your Movement phase, select one friendly NECRONS model within 6\" of the bearer.\u00a0That model regains up to D3 lost wounds. Each model can\u00a0only be selected for this ability once per turn."}], "rangedWeapons": [{"name": "Staff of light", "Range": "18\"", "A": "3", "BS": "4+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}], "meleeWeapons": [{"name": "Staff of light", "Range": "Melee", "A": "2", "WS": "4+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Tesseract Vault", "category": "Vehicles", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 445, "p3": 465}], "datasheet": {"stats": {"M": "8\"", "T": "12", "SV": "2+", "W": "24", "LD": "7+", "OC": "8"}, "keywords": ["Vehicle", "Titanic", "Fly", "Towering", "Tesseract Vault"], "abilities": [{"name": "Damaged: 1-8 wounds remaining", "text": "While this model has 1-8 wounds remaining, subtract 4 from\u00a0its Objective Control characteristic and you can only select one of the C'tan Powers weapons in your Shooting phase, instead of two."}, {"name": "Powers of the C\u2019tan", "text": "In your Shooting phase, when this model\u00a0is selected to shoot, first select up to 2 different C\u2019tan Powers\u00a0weapons. Until the end of the phase, this model is\u00a0equipped with those weapons in addition to its other weapons\u00a0(this model cannot make attacks with any other C\u2019tan Powers\u00a0weapon you did not select in this way this phase)."}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}], "rangedWeapons": [{"name": "Tesla sphere", "Range": "24\"", "A": "6", "BS": "3+", "S": "7", "AP": "0", "D": "1", "Keywords": "Sustained Hits 2"}], "meleeWeapons": [{"name": "Armoured bulk", "Range": "Melee", "A": "6", "WS": "4+", "S": "8", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "The Silent King", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "3", "flat": 400, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "8\"", "T": "10", "SV": "2+", "W": "16", "LD": "6+", "OC": "6"}, "keywords": ["Character", "The Silent King"], "abilities": [], "rangedWeapons": [{"name": "Sceptre of Eternal Glory", "Range": "24\"", "A": "2", "BS": "2+", "S": "10", "AP": "-3", "D": "3", "Keywords": "Devastating Wounds"}, {"name": "Staff of Stars", "Range": "24\"", "A": "12", "BS": "2+", "S": "6", "AP": "-1", "D": "1", "Keywords": "Indirect Fire"}], "meleeWeapons": [{"name": "Weapons of the Final Triarch", "Range": "Melee", "A": "12", "WS": "2+", "S": "8", "AP": "-3", "D": "2", "Keywords": "Lethal Hits"}]}}, {"name": "Tomb Blades", "category": "Destroyer Cult", "epicHero": false, "hasScaling": true, "sizes": [{"models": "3", "flat": null, "p1_2": 70, "p3": 80}, {"models": "6", "flat": null, "p1_2": 140, "p3": 150}], "datasheet": {"stats": {"M": "12\"", "T": "5", "SV": "4+", "W": "2", "LD": "7+", "OC": "2"}, "keywords": [], "abilities": [{"name": "Shadowloom", "text": "The bearer has the Stealth ability."}, {"name": "Nebuloscope", "text": "Ranged weapons equipped by the bearer have\u00a0the [IGNORES COVER] ability."}, {"name": "Shieldvanes", "text": "The bearer has a Save characteristic of 3+ and a Move characteristic of 8\"."}], "rangedWeapons": [{"name": "Twin gauss blaster", "Range": "24\"", "A": "2", "BS": "3+", "S": "5", "AP": "-1", "D": "1", "Keywords": "Lethal Hits, Twin-linked"}, {"name": "Particle beamer", "Range": "18\"", "A": "D6", "BS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "Blast, Devastating Wounds"}, {"name": "Twin tesla carbine", "Range": "24\"", "A": "2", "BS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "Assault, Sustained Hits 2, Twin-linked"}], "meleeWeapons": [{"name": "Close combat weapon", "Range": "Melee", "A": "1", "WS": "4+", "S": "4", "AP": "0", "D": "1", "Keywords": "-"}]}}, {"name": "Transcendent C'Tan", "category": "Monsters", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 340, "p3": 360}], "datasheet": {"stats": {"M": "8\"", "T": "11", "SV": "3+", "W": "16", "LD": "6+", "OC": "4"}, "keywords": ["Monster", "Character", "Fly", "Transcendent C'tan"], "abilities": [{"name": "Invulnerable Save (4+)", "text": "This model has a 4+ invulnerable save."}, {"name": "Transdimensional Displacement", "text": "Each time this model is\u00a0selected to Advance, you can remove it from the battlefield\u00a0and set it up again anywhere on the battlefield that is more\u00a0than 9\" horizontally away from all enemy models."}, {"name": "C'tan Shard", "text": "This model cannot be given Enhancements."}, {"name": "Relatavistic Tether", "text": "In your turn, each time this model is set up on the battlefield using the Deep Strike or Transdimensional Displacement abilities, it can be set up anywhere on the battlefield that is more than 6\" horizontally away from all enemy units. When doing so, if this model is set up within 9\" of one or more enemy units, until the end of the turn, it is not eligible to declare a charge."}], "rangedWeapons": [{"name": "Seismic assault", "Range": "12\"", "A": "6", "BS": "2+", "S": "8", "AP": "-2", "D": "2", "Keywords": "Assault, Sustained Hits 1"}], "meleeWeapons": [{"name": "Crackling tendrils", "Range": "Melee", "A": "8", "WS": "2+", "S": "10", "AP": "-3", "D": "D6", "Keywords": "Sustained Hits 1"}]}}, {"name": "Trazyn The Infinite", "category": "Characters", "epicHero": true, "hasScaling": false, "sizes": [{"models": "1", "flat": 65, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "5\"", "T": "5", "SV": "2+", "W": "6", "LD": "6+", "OC": "1"}, "keywords": ["Infantry", "Character", "Epic Hero", "Noble", "Trazyn the Infinite"], "abilities": [{"name": "Leader", "text": "This model can be attached to the following units:\n\u25a0 IMMORTALS\n\u25a0 LYCHGUARD\n\u25a0 NECRON WARRIORS"}, {"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Ancient Collector", "text": "While this model is leading a unit, at the\u00a0end of your Command phase, if that unit is within range of an\u00a0objective marker you control, that objective marker remains under your control,\u00a0even if you have no models within range of it, until your\u00a0opponent controls it at start or end of any turn."}, {"name": "Surrogate Hosts", "text": "At the start of your Command phase, if this\u00a0model is on the battlefield, you can select one other friendly\u00a0NECRONS INFANTRY CHARACTER model on the battlefield\u00a0(excluding SKORPEKH LORD or EPIC HERO models). The\u00a0selected model is destroyed (ignoring any rules that are\u00a0triggered when a model is destroyed) and this model is put\nin its place, with all of its wounds remaining (if the selected\u00a0model was leading a unit, this model now attaches to that unit\u00a0as its Leader)."}], "rangedWeapons": [], "meleeWeapons": [{"name": "Empathic Obliterator", "Range": "Melee", "A": "4", "WS": "2+", "S": "7", "AP": "0", "D": "D3", "Keywords": "Sustained Hits D3"}]}}, {"name": "Triarch Praetorians", "category": "Infantry", "epicHero": false, "hasScaling": false, "sizes": [{"models": "5", "flat": 80, "p1_2": null, "p3": null}, {"models": "10", "flat": 160, "p1_2": null, "p3": null}], "datasheet": {"stats": {"M": "10\"", "T": "5", "SV": "3+", "W": "2", "LD": "7+", "OC": "1"}, "keywords": ["Infantry", "Fly", "Triarch Praetorians"], "abilities": [{"name": "Relentless Combatants", "text": "You can re-roll Charge rolls made for\u00a0this unit, and this unit is eligible to declare a charge in a turn\u00a0in which it Fell Back."}], "rangedWeapons": [{"name": "Rod of covenant", "Range": "12\"", "A": "1", "BS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "-"}, {"name": "Particle caster", "Range": "12\"", "A": "3", "BS": "3+", "S": "5", "AP": "0", "D": "1", "Keywords": "Devastating Wounds, Pistol"}], "meleeWeapons": [{"name": "Rod of covenant", "Range": "Melee", "A": "3", "WS": "3+", "S": "5", "AP": "-2", "D": "2", "Keywords": "-"}, {"name": "Voidblade", "Range": "Melee", "A": "4", "WS": "3+", "S": "5", "AP": "-2", "D": "1", "Keywords": "-"}]}}, {"name": "Triarch Stalker", "category": "Vehicles", "epicHero": false, "hasScaling": true, "sizes": [{"models": "1", "flat": null, "p1_2": 110, "p3": 120}], "datasheet": {"stats": {"M": "8\"", "T": "8", "SV": "3+", "W": "12", "LD": "7+", "OC": "4"}, "keywords": ["Vehicle", "Walker", "Triarch Stalker"], "abilities": [{"name": "Invulnerable Save", "text": "This model has a 4+ invulnerable save."}, {"name": "Targeting Relay", "text": "In your Shooting phase, after this model has shot, select\u00a0one enemy unit hit by one or more of those attacks.\u00a0Until the end of the phase, that unit cannot have the Benefit\u00a0of Cover."}], "rangedWeapons": [{"name": "\u27a4 Heat ray - dispersed", "Range": "12\"", "A": "2D6", "BS": "N/A", "S": "5", "AP": "-1", "D": "1", "Keywords": "Ignores Cover, Torrent"}, {"name": "\u27a4 Heat ray - focused", "Range": "18\"", "A": "2", "BS": "3+", "S": "9", "AP": "-4", "D": "D6", "Keywords": "Melta 4"}, {"name": "Particle shredder", "Range": "18\"", "A": "D6+6", "BS": "2+", "S": "7", "AP": "0", "D": "1", "Keywords": "Blast, Devastating Wounds"}, {"name": "Heavy gauss cannon array", "Range": "24\"", "A": "6", "BS": "3+", "S": "8", "AP": "-2", "D": "2", "Keywords": "Lethal Hits"}], "meleeWeapons": [{"name": "Stalker's forelimbs", "Range": "Melee", "A": "4", "WS": "3+", "S": "7", "AP": "-1", "D": "3", "Keywords": "-"}]}}];
+const CATEGORY_ORDER = ["Characters", "Battleline", "Infantry", "Destroyer Cult", "Canoptek Constructs", "Vehicles", "Monsters"];
+const MAX_COPIES = 3;
+
+let army = [];          // { id, unitName, category, models, points, copyIndex }
+let nextId = 1;
+let activeUnit = null;  // unit currently open in modal
+
+function countInArmy(unitName) {
+  return army.filter(a => a.unitName === unitName).length;
+}
+
+function maxAllowed(unit) {
+  return unit.epicHero ? 1 : MAX_COPIES;
+}
+
+function priceFor(size, copyIndexZeroBased) {
+  // copyIndexZeroBased: 0 = first copy already in army count before this add
+  if (size.flat !== null && size.flat !== undefined) return size.flat;
+  return copyIndexZeroBased < 2 ? size.p1_2 : size.p3;
+}
+
+function unitPriceRangeLabel(unit) {
+  const prices = [];
+  unit.sizes.forEach(s => {
+    if (s.flat !== null && s.flat !== undefined) prices.push(s.flat);
+    if (s.p1_2 !== null && s.p1_2 !== undefined) prices.push(s.p1_2);
+  });
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  return min === max ? (min + ' pts') : (min + '\u2013' + max + ' pts');
+}
+
+function groupByCategory(list) {
+  const groups = {};
+  list.forEach(u => {
+    if (!groups[u.category]) groups[u.category] = [];
+    groups[u.category].push(u);
+  });
+  return groups;
+}
+
+function renderUnitList(filterText) {
+  const container = document.getElementById('unitList');
+  container.innerHTML = "";
+  const filtered = filterText
+    ? UNITS.filter(u => u.name.toLowerCase().includes(filterText.toLowerCase()))
+    : UNITS;
+  const groups = groupByCategory(filtered);
+  CATEGORY_ORDER.forEach(cat => {
+    if (!groups[cat] || groups[cat].length === 0) return;
+    const catDiv = document.createElement('div');
+    catDiv.className = 'category';
+    const title = document.createElement('div');
+    title.className = 'category-title';
+    title.innerHTML = '<span>' + cat + ' (' + groups[cat].length + ')</span><span class="arrow">\u25be</span>';
+    title.onclick = () => {
+      catDiv.classList.toggle('collapsed');
+      title.querySelector('.arrow').textContent = catDiv.classList.contains('collapsed') ? '\u25b8' : '\u25be';
+    };
+    const body = document.createElement('div');
+    body.className = 'category-body';
+    groups[cat].sort((a,b) => a.name.localeCompare(b.name)).forEach(u => {
+      const have = countInArmy(u.name);
+      const max = maxAllowed(u);
+      const maxed = have >= max;
+      const row = document.createElement('div');
+      row.className = 'unit-row' + (maxed ? ' maxed' : '');
+      row.innerHTML = `
+        <div class="unit-info">
+          <div class="unit-name">${u.name}${u.epicHero ? ' \u2605' : ''}</div>
+          <div class="unit-sub">${unitPriceRangeLabel(u)}</div>
+        </div>
+        <div class="unit-count ${maxed ? 'full' : ''}">${have}/${max}</div>
+      `;
+      if (!maxed) row.onclick = () => openModal(u);
+      body.appendChild(row);
+    });
+    catDiv.appendChild(title);
+    catDiv.appendChild(body);
+    container.appendChild(catDiv);
+  });
+}
+
+function statGrid(stats) {
+  const order = ['M','T','SV','W','LD','OC'];
+  const cells = order.filter(k => stats[k]).map(k =>
+    `<div class="stat-cell"><div class="stat-label">${k}</div><div class="stat-value">${stats[k]}</div></div>`
+  ).join('');
+  return `<div class="stat-grid">${cells}</div>`;
+}
+
+function keywordChips(keywords) {
+  if (!keywords || keywords.length === 0) return '';
+  return '<div class="keyword-chips">' + keywords.map(k => `<span class="chip">${k}</span>`).join('') + '</div>';
+}
+
+function abilitiesBlock(abilities) {
+  if (!abilities || abilities.length === 0) return '';
+  const items = abilities.map(a =>
+    `<div class="ability-item"><div class="ability-name">${a.name}</div><div class="ability-text">${a.text}</div></div>`
+  ).join('');
+  return `<div class="section-title">Abilities</div>${items}`;
+}
+
+function weaponTable(title, weapons, melee) {
+  if (!weapons || weapons.length === 0) return '';
+  const skillCol = melee ? 'WS' : 'BS';
+  const rows = weapons.map(w => `
+    <tr>
+      <td>${w.name}</td>
+      <td>${w.Range || '-'}</td>
+      <td>${w.A || '-'}</td>
+      <td>${w[skillCol] || '-'}</td>
+      <td>${w.S || '-'}</td>
+      <td>${w.AP || '-'}</td>
+      <td>${w.D || '-'}</td>
+      <td>${(w.Keywords && w.Keywords !== '-') ? w.Keywords : '\u2013'}</td>
+    </tr>`).join('');
+  return `
+    <div class="section-title">${title}</div>
+    <table class="weapon-table">
+      <thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>${skillCol}</th><th>S</th><th>AP</th><th>D</th><th>Keywords</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function openModal(unit) {
+  activeUnit = unit;
+  document.getElementById('modalCat').textContent = unit.category + (unit.epicHero ? ' \u00b7 Epic Hero (max 1)' : ' \u00b7 max 3 per army');
+  document.getElementById('modalName').textContent = unit.name;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = "";
+
+  const ds = unit.datasheet;
+  if (ds) {
+    const dsWrap = document.createElement('div');
+    dsWrap.innerHTML =
+      statGrid(ds.stats || {}) +
+      keywordChips(ds.keywords) +
+      abilitiesBlock(ds.abilities) +
+      weaponTable('Ranged Weapons', ds.rangedWeapons, false) +
+      weaponTable('Melee Weapons', ds.meleeWeapons, true);
+    body.appendChild(dsWrap);
+  }
+
+  const have = countInArmy(unit.name);
+  const copyIndex = have; // 0-based index of the copy about to be added
+
+  let sizeSelect = null;
+  if (unit.sizes.length > 1) {
+    const field = document.createElement('div');
+    field.className = 'modal-field';
+    field.innerHTML = '<label>Unit size</label>';
+    sizeSelect = document.createElement('select');
+    unit.sizes.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = s.models + (s.models === '1' ? ' model' : ' models');
+      sizeSelect.appendChild(opt);
+    });
+    field.appendChild(sizeSelect);
+    body.appendChild(field);
+  }
+
+  const priceField = document.createElement('div');
+  priceField.className = 'modal-field';
+  priceField.innerHTML = '<label>Cost</label><div class="modal-price" id="modalPrice"></div><div class="modal-note" id="modalNote"></div>';
+  body.appendChild(priceField);
+
+  function updatePrice() {
+    const sizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
+    const size = unit.sizes[sizeIdx];
+    const price = priceFor(size, copyIndex);
+    document.getElementById('modalPrice').textContent = price + ' pts';
+    const note = document.getElementById('modalNote');
+    if (size.flat === null || size.flat === undefined) {
+      note.textContent = copyIndex < 2
+        ? 'Price for the 1st or 2nd copy of this unit in your army.'
+        : 'Price increases for the 3rd copy of this unit in your army.';
+    } else {
+      note.textContent = '';
+    }
+  }
+  if (sizeSelect) sizeSelect.onchange = updatePrice;
+  updatePrice();
+
+  const warn = document.createElement('div');
+  warn.className = 'modal-warn';
+  warn.id = 'modalWarn';
+  if (have > 0) {
+    warn.textContent = 'You already have ' + have + ' of this unit in your army.';
+  }
+  body.appendChild(warn);
+
+  document.getElementById('modalAdd').onclick = () => {
+    const sizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
+    const size = unit.sizes[sizeIdx];
+    const price = priceFor(size, copyIndex);
+    army.push({
+      id: nextId++,
+      unitName: unit.name,
+      category: unit.category,
+      models: size.models,
+      points: price,
+    });
+    closeModal();
+    renderUnitList(document.getElementById('searchInput').value);
+    renderArmy();
+  };
+
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.add('hidden');
+  activeUnit = null;
+}
+
+function removeFromArmy(id) {
+  army = army.filter(a => a.id !== id);
+  renderArmy();
+  renderUnitList(document.getElementById('searchInput').value);
+}
+
+function renderArmy() {
+  const container = document.getElementById('armyList');
+  const countEl = document.getElementById('unitCount');
+  if (army.length === 0) {
+    container.innerHTML = '<div class="army-empty">No units added yet. Click a unit to add it.</div>';
+  } else {
+    container.innerHTML = "";
+    army.forEach(a => {
+      const row = document.createElement('div');
+      row.className = 'army-row';
+      row.innerHTML = `
+        <div class="unit-info">
+          <div class="unit-name">${a.unitName}</div>
+          <div class="cat-badge">${a.category} \u00b7 ${a.models} ${a.models === '1' ? 'model' : 'models'}</div>
+        </div>
+        <div class="unit-pts">${a.points} pts</div>
+        <button class="remove-btn" title="Remove">\u2715</button>
+      `;
+      row.querySelector('.remove-btn').onclick = () => removeFromArmy(a.id);
+      container.appendChild(row);
+    });
+  }
+  countEl.textContent = army.length + (army.length === 1 ? ' unit' : ' units');
+  updateTotal();
+}
+
+function updateTotal() {
+  const total = army.reduce((sum, a) => sum + a.points, 0);
+  const limit = parseInt(document.getElementById('pointsLimit').value) || 0;
+  const totalEl = document.getElementById('totalDisplay');
+  totalEl.textContent = total + ' / ' + limit;
+  totalEl.className = 'points-total ' + (total > limit ? 'over' : 'ok');
+}
+
+document.getElementById('searchInput').addEventListener('input', e => renderUnitList(e.target.value));
+document.getElementById('pointsLimit').addEventListener('input', updateTotal);
+document.getElementById('clearBtn').addEventListener('click', () => { army = []; renderArmy(); renderUnitList(document.getElementById('searchInput').value); });
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
+
+renderUnitList('');
+renderArmy();
+</script>
+</body>
+</html>
