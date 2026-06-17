@@ -363,9 +363,23 @@
   .toolbar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
   .toolbar select {
     background: #0b0f0a; border: 1px solid var(--border); color: var(--text);
-    padding: 6px 8px; border-radius: 4px; font-size: 13px; min-width: 200px;
+    padding: 6px 8px; border-radius: 4px; font-size: 13px;
   }
   .toolbar .spacer { flex: 1; }
+  .det-list { display: flex; gap: 6px; flex-wrap: wrap; }
+  .det-chip {
+    display: inline-flex; align-items: center; gap: 7px; background: var(--panel2);
+    border: 1px solid var(--green-dim); border-radius: 14px; padding: 3px 10px; font-size: 12px; color: var(--text);
+  }
+  .det-chip .dp { color: var(--gold); font-weight: bold; }
+  .det-chip .disp { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .det-chip .uni { color: #b07fd0; font-size: 10px; text-transform: uppercase; }
+  .det-chip .x { cursor: pointer; color: var(--text-dim); font-weight: bold; }
+  .det-chip .x:hover { color: #e25a3a; }
+  .dp-readout { font-size: 12px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; white-space: nowrap; }
+  .dp-readout.over { color: #e25a3a; border-color: #5a1f1f; }
+  .det-warn { color: #e25a3a; font-size: 12px; padding: 0 16px; min-height: 0; }
+  .det-warn:not(:empty) { padding: 8px 16px; }
   .tb-btn {
     background: var(--panel2); border: 1px solid var(--border); color: var(--text);
     padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
@@ -376,6 +390,7 @@
     display: inline-block; margin-top: 4px; font-size: 11px; color: #0b0f0a;
     background: var(--gold); padding: 1px 6px; border-radius: 3px;
   }
+  .enh-badge.upg { background: #b07fd0; }
   .enh-btn {
     background: #2a230d; border: 1px solid var(--gold); color: var(--gold);
     border-radius: 4px; cursor: pointer; font-size: 13px; width: 26px; height: 26px; flex: none;
@@ -418,13 +433,16 @@
 </header>
 
 <div class="toolbar">
-  <span class="tb-label">Detachment</span>
-  <select id="detachmentSelect"></select>
+  <span class="tb-label">Detachments</span>
+  <div id="detList" class="det-list"></div>
+  <select id="detAdd"></select>
+  <span class="dp-readout" id="dpReadout">DP 0 / 3</span>
   <span class="spacer"></span>
   <span class="tb-label" id="listNameTag"></span>
   <button class="tb-btn" id="listsBtn">Saved lists</button>
   <button class="tb-btn" id="shareBtn">Share / Import</button>
 </div>
+<div class="det-warn" id="detWarn"></div>
 
 <main>
   <div class="col">
@@ -853,49 +871,118 @@ function updateTotal() {
 }
 
 /* ============================================================
-   Persistence + detachments + enhancements + attachments
+   Persistence + multi-detachment (DP) + enhancements + attachments
    ============================================================ */
 const FACTION_KEY = 'necrons';
-let detachment = null;
+let detachments = [];          // array of detachment names
 let curListName = 'Untitled';
 
+// dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword
 const DETACHMENTS = [
-  {name:"Annihilation Legion", enhancements:[
+  {name:"Annihilation Legion", dp:2, disp:"Purge the Foe", unique:null, enh:[
     {name:"Eldritch Nightmare",cost:10},{name:"Eternal Madness",cost:20},
     {name:"Ingrained Superiority",cost:5},{name:"Soulless Reaper",cost:15}]},
-  {name:"Awakened Dynasty", enhancements:[
+  {name:"Awakened Dynasty", dp:3, disp:"Take and Hold", unique:"DYNASTY", enh:[
     {name:"Enaegic Dermal Bond",cost:30},{name:"Nether-realm Casket",cost:20},
     {name:"Phasal Subjugator",cost:35},{name:"Veil of Darkness",cost:20}]},
-  {name:"Canoptek Court", enhancements:[
+  {name:"Canoptek Court", dp:3, disp:"Take and Hold", unique:null, enh:[
     {name:"Autodivinator",cost:15},{name:"Dimensional Sanctum",cost:20},
     {name:"Hyperphasic Fulcrum",cost:15},{name:"Metalodermal Tesla Weave",cost:10}]},
-  {name:"Cryptek Conclave", enhancements:[
+  {name:"Cryptek Conclave", dp:2, disp:"Priority Assets", unique:null, enh:[
     {name:"Atomic Disintegrators",cost:10},{name:"Gauntlet of Compression",cost:20},
     {name:"Gravitic Bolas",cost:15},{name:"Quantum Abacus",cost:15}]},
-  {name:"Cursed Legion", enhancements:[
+  {name:"Cursed Legion", dp:2, disp:"Purge the Foe", unique:null, enh:[
     {name:"Cursed Circlet",cost:25},{name:"Destroyer Ankh",cost:20},
     {name:"Mark of the Nekrosor",cost:20},{name:"Murdermind",cost:15}]},
-  {name:"Hand of the Dynasty", enhancements:[
-    {name:"Enlivened Sentinels",cost:20},{name:"Tools of Dominion",cost:15}]},
-  {name:"Hypercrypt Legion", enhancements:[
+  {name:"Hand of the Dynasty", dp:1, disp:"Take and Hold", unique:"DYNASTY", enh:[
+    {name:"Enlivened Sentinels",cost:20,upgrade:true},{name:"Tools of Dominion",cost:15,upgrade:true}]},
+  {name:"Hypercrypt Legion", dp:2, disp:"Reconnaissance", unique:"HYPERCRYPT", enh:[
     {name:"Arisen Tyrant",cost:25},{name:"Dimensional Overseer",cost:25},
     {name:"Hyperspatial Transfer Node",cost:15},{name:"Osteoclave Fulcrum",cost:20}]},
-  {name:"Obeisance Phalanx", enhancements:[
+  {name:"Obeisance Phalanx", dp:2, disp:"Disruption", unique:null, enh:[
     {name:"Eternal Conqueror",cost:25},{name:"Honourable Combatant",cost:10},
     {name:"Unflinching Will",cost:20},{name:"Warrior Noble",cost:15}]},
-  {name:"Pantheon of Woe", enhancements:[
+  {name:"Pantheon of Woe", dp:2, disp:"Purge the Foe", unique:null, enh:[
     {name:"Animus Damper",cost:35},{name:"Quantum Goad",cost:45},
     {name:"Reletavistic Tether",cost:40},{name:"Singularity Matrix",cost:45}]},
-  {name:"Skyshroud Spearhead", enhancements:[
-    {name:"Deepening Madness",cost:20},{name:"Recursive Reanimation",cost:5}]},
-  {name:"Starshatter Arsenal", enhancements:[
+  {name:"Skyshroud Spearhead", dp:1, disp:"Reconnaissance", unique:null, enh:[
+    {name:"Deepening Madness",cost:20,upgrade:true},{name:"Recursive Reanimation",cost:5,upgrade:true}]},
+  {name:"Starshatter Arsenal", dp:3, disp:"Priority Assets", unique:null, enh:[
     {name:"Chrono-impedance Fields",cost:25},{name:"Demanding Leader",cost:10},
     {name:"Dread Majesty",cost:30},{name:"Miniaturised Nebuloscope",cost:15}]},
-  {name:"The Phaeron's Armoury", enhancements:[
-    {name:"Mortality Shroud",cost:10},{name:"Prelocational Optimiser",cost:25}]},
+  {name:"The Phaeron's Armoury", dp:1, disp:"Priority Assets", unique:"HYPERCRYPT", enh:[
+    {name:"Mortality Shroud",cost:10,upgrade:true},{name:"Prelocational Optimiser",cost:25}]},
 ];
 
-/* ---- helpers -------------------------------------------------------- */
+/* ---- detachment helpers -------------------------------------------- */
+function getDet(name){ return DETACHMENTS.find(d => d.name === name); }
+function selectedDets(){ return detachments.map(getDet).filter(Boolean); }
+function dpUsed(){ return selectedDets().reduce((s, d) => s + d.dp, 0); }
+function dpBudget(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 3 : 2; }
+function enhLimit(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 4 : 2; }
+function enhPool(){
+  const map = {};
+  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade}; }));
+  return Object.values(map);
+}
+function distinctEnhNames(exceptId){
+  const s = new Set();
+  army.forEach(e => { if(e.enhancement && e.id !== exceptId) s.add(e.enhancement.name); });
+  return s;
+}
+function pruneEnhancements(){
+  const names = new Set(enhPool().map(e => e.name));
+  army.forEach(e => { if(e.enhancement && !names.has(e.enhancement.name)) e.enhancement = null; });
+}
+function setWarn(msg){
+  const w = document.getElementById('detWarn');
+  w.textContent = msg || '';
+  if(msg) setTimeout(() => { if(w.textContent === msg) w.textContent = ''; }, 4500);
+}
+function addDetachment(name){
+  if(!name || detachments.includes(name)) return;
+  const cand = getDet(name); if(!cand) return;
+  const cur = selectedDets();
+  if(cand.dp === 3 && cur.length > 0){ setWarn('A 3 DP detachment must be taken on its own.'); return; }
+  if(cur.some(d => d.dp === 3)){ setWarn('You already have a 3 DP detachment, which must be fielded alone.'); return; }
+  if(cand.unique && cur.some(d => d.unique === cand.unique)){
+    setWarn('You cannot combine two detachments that share the keyword: ' + cand.unique + '.'); return;
+  }
+  detachments.push(name);
+  setWarn('');
+  pruneEnhancements();
+  renderDetachments(); renderArmy();
+}
+function removeDetachment(name){
+  detachments = detachments.filter(n => n !== name);
+  pruneEnhancements();
+  renderDetachments(); renderArmy();
+}
+function renderDetachments(){
+  const list = document.getElementById('detList');
+  list.innerHTML = '';
+  selectedDets().forEach(d => {
+    const chip = document.createElement('span');
+    chip.className = 'det-chip';
+    chip.innerHTML = '<span>' + d.name + '</span>' +
+      '<span class="dp">' + d.dp + 'DP</span>' +
+      '<span class="disp">' + d.disp + '</span>' +
+      (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
+      '<span class="x" title="Remove">✕</span>';
+    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    list.appendChild(chip);
+  });
+  const sel = document.getElementById('detAdd');
+  const avail = DETACHMENTS.filter(d => !detachments.includes(d.name));
+  sel.innerHTML = '<option value="">+ Add detachment…</option>' +
+    avail.map(d => '<option value="' + d.name + '">' + d.name + '  (' + d.dp + 'DP · ' + d.disp + (d.unique ? (' · ' + d.unique) : '') + ')</option>').join('');
+  const used = dpUsed(), budget = dpBudget();
+  const ro = document.getElementById('dpReadout');
+  ro.textContent = 'DP ' + used + ' / ' + budget;
+  ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+
+/* ---- unit / character helpers -------------------------------------- */
 function unitDefOf(entry){ return UNITS.find(u => u.name === entry.unitName); }
 function isCharacter(entry){
   const u = unitDefOf(entry);
@@ -919,9 +1006,15 @@ function eligibleBodyguards(leader){
   const tg = leaderTargetsFor(leader);
   return army.filter(e => e.id !== leader.id && tg.includes(e.unitName));
 }
-function assignedEnhCount(){ return army.filter(e => e.enhancement).length; }
 
-/* ---- army rendering (overrides original) --------------------------- */
+/* ---- army rendering ------------------------------------------------- */
+function canTakeEnhancement(entry){
+  if(detachments.length === 0) return false;
+  const pool = enhPool();
+  const unitDef = unitDefOf(entry);
+  if(isCharacter(entry)) return !(unitDef && unitDef.epicHero) && pool.some(e => !e.upgrade);
+  return pool.some(e => e.upgrade);   // non-character units: Upgrade enhancements
+}
 function buildArmyRow(a, attached){
   const row = document.createElement('div');
   row.className = 'army-row' + (attached ? ' attached' : '');
@@ -930,8 +1023,8 @@ function buildArmyRow(a, attached){
   const wgLine = (a.wargear && a.wargear.length > 0)
     ? '<div class="cat-badge">' + a.wargear.map(w => '+' + w.qty + ' ' + w.name).join(', ') + '</div>' : '';
   const enhLine = a.enhancement
-    ? '<div class="enh-badge">★ ' + a.enhancement.name + ' (+' + a.enhancement.cost + ')</div>' : '';
-  const canEnh = isCharacter(a) && !(unitDef && unitDef.epicHero) && !!detachment;
+    ? '<div class="enh-badge' + (a.enhancement.upgrade ? ' upg' : '') + '">★ ' + a.enhancement.name + ' (+' + a.enhancement.cost + ')</div>' : '';
+  const canEnh = canTakeEnhancement(a);
   const isLead = isLeaderEntry(a);
   const ptsTotal = a.points + (a.enhancement ? a.enhancement.cost : 0);
   const tag = attached ? '<span class="attached-tag">▸ leading</span> ' : '';
@@ -952,7 +1045,6 @@ function buildArmyRow(a, attached){
   row.querySelector('.remove-btn').onclick = () => removeFromArmy(a.id);
   return row;
 }
-
 function renderArmy(){
   const container = document.getElementById('armyList');
   const countEl = document.getElementById('unitCount');
@@ -975,7 +1067,6 @@ function renderArmy(){
   updateTotal();
   saveCurrent();
 }
-
 function updateTotal(){
   const total = army.reduce((s, a) => s + a.points + (a.enhancement ? a.enhancement.cost : 0), 0);
   const limit = parseInt(document.getElementById('pointsLimit').value) || 0;
@@ -983,14 +1074,12 @@ function updateTotal(){
   el.textContent = total + ' / ' + limit;
   el.className = 'points-total ' + (total > limit ? 'over' : 'ok');
 }
-
 function removeFromArmy(id){
   army = army.filter(a => a.id !== id);
   army.forEach(e => { if(e.attachedTo === id) e.attachedTo = null; });
   renderArmy();
   renderUnitList(document.getElementById('searchInput').value);
 }
-
 function closeModal(){
   document.getElementById('overlay').classList.add('hidden');
   const add = document.getElementById('modalAdd');
@@ -1032,35 +1121,40 @@ function openAttachModal(leader){
     d.onclick = () => { leader.attachedTo = null; closeModal(); renderArmy(); };
     body.appendChild(d);
   }
-  const add = document.getElementById('modalAdd');
-  add.style.display = 'none';
+  document.getElementById('modalAdd').style.display = 'none';
   document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- enhancement modal --------------------------------------------- */
 function openEnhancementModal(entry){
-  const det = DETACHMENTS.find(d => d.name === detachment);
-  if(!det){ alert('Select a detachment first.'); return; }
-  document.getElementById('modalCat').textContent = 'Enhancement · ' + det.name;
+  if(detachments.length === 0){ alert('Add a detachment first.'); return; }
+  const isChar = isCharacter(entry);
+  const opts = enhPool().filter(e => isChar ? !e.upgrade : e.upgrade);
+  document.getElementById('modalCat').textContent = 'Enhancement' + (isChar ? '' : ' · Upgrade');
   document.getElementById('modalName').textContent = entry.unitName;
   const body = document.getElementById('modalBody');
   body.innerHTML = '';
   const note = document.createElement('div');
   note.className = 'modal-note';
-  note.textContent = 'Up to 3 enhancements per army, each used once, one per Character. Epic Heroes cannot take enhancements.';
+  note.textContent = 'Enhancement limit for this battle size: ' + enhLimit() +
+    '. ' + (isChar ? 'One per Character; each used once.' : 'Upgrade enhancements go on non-Character units.');
   body.appendChild(note);
-  const used = army.filter(e => e.id !== entry.id && e.enhancement).map(e => e.enhancement.name);
-  det.enhancements.forEach(enh => {
-    const taken = used.includes(enh.name);
+  const usedByOthers = distinctEnhNames(entry.id);
+  opts.forEach(enh => {
     const selected = entry.enhancement && entry.enhancement.name === enh.name;
+    const takenUnique = !enh.upgrade && usedByOthers.has(enh.name);
     const b = document.createElement('button');
     b.className = 'tb-btn';
     b.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;';
-    b.textContent = (selected ? '✓ ' : '') + enh.name + '  (+' + enh.cost + ' pts)' + (taken ? '  — in use' : '');
-    if(taken){ b.disabled = true; b.style.opacity = 0.45; }
+    b.textContent = (selected ? '✓ ' : '') + enh.name + '  (+' + enh.cost + ' pts)' +
+      (enh.upgrade ? '  [Upgrade]' : '') + (takenUnique ? '  — in use' : '');
+    if(takenUnique){ b.disabled = true; b.style.opacity = 0.45; }
     b.onclick = () => {
-      if(!selected && !entry.enhancement && assignedEnhCount() >= 3){ alert('Maximum of 3 enhancements per army.'); return; }
-      entry.enhancement = selected ? null : { name: enh.name, cost: enh.cost };
+      if(selected){ entry.enhancement = null; closeModal(); renderArmy(); return; }
+      const names = distinctEnhNames(entry.id);
+      const willAddName = !names.has(enh.name);
+      if(willAddName && names.size >= enhLimit()){ alert('Enhancement limit for this battle size is ' + enhLimit() + '.'); return; }
+      entry.enhancement = { name: enh.name, cost: enh.cost, upgrade: !!enh.upgrade };
       closeModal(); renderArmy();
     };
     body.appendChild(b);
@@ -1073,16 +1167,15 @@ function openEnhancementModal(entry){
     d.onclick = () => { entry.enhancement = null; closeModal(); renderArmy(); };
     body.appendChild(d);
   }
-  const add = document.getElementById('modalAdd');
-  add.style.display = 'none';
+  document.getElementById('modalAdd').style.display = 'none';
   document.getElementById('overlay').classList.remove('hidden');
 }
 
-/* ---- save state / serialization ------------------------------------ */
+/* ---- serialization / persistence ----------------------------------- */
 function serialize(){
   return {
-    v: 1, faction: FACTION_KEY, name: curListName,
-    detachment: detachment,
+    v: 2, faction: FACTION_KEY, name: curListName,
+    detachments: detachments.slice(),
     pointsLimit: parseInt(document.getElementById('pointsLimit').value) || 0,
     nextId: nextId,
     army: army.map(a => ({
@@ -1094,6 +1187,9 @@ function serialize(){
 }
 function applyState(s){
   if(!s || s.faction !== FACTION_KEY) return false;
+  let dets = s.detachments;
+  if(!dets && s.detachment) dets = [s.detachment];   // migrate v1 single detachment
+  detachments = (dets || []).filter(n => getDet(n));
   army = (s.army || []).map(a => ({
     id: a.id, unitName: a.unitName, category: a.category, models: a.models,
     basePoints: a.basePoints, points: a.points,
@@ -1101,11 +1197,10 @@ function applyState(s){
     leaderTargets: parseLeaderTargets(UNITS.find(u => u.name === a.unitName))
   }));
   nextId = s.nextId || (army.reduce((m, a) => Math.max(m, a.id), 0) + 1);
-  detachment = s.detachment || null;
   curListName = s.name || 'Untitled';
   document.getElementById('pointsLimit').value = s.pointsLimit || 2000;
-  const ds = document.getElementById('detachmentSelect');
-  if(ds) ds.value = detachment || '';
+  pruneEnhancements();
+  renderDetachments();
   renderUnitList(document.getElementById('searchInput').value);
   renderArmy();
   return true;
@@ -1132,11 +1227,12 @@ function renderListsContainer(){
   names.forEach(n => {
     const L = lists[n];
     const total = (L.army || []).reduce((s, a) => s + (a.points || 0) + (a.enhancement ? a.enhancement.cost : 0), 0);
+    const dets = L.detachments || (L.detachment ? [L.detachment] : []);
     const row = document.createElement('div');
     row.className = 'lists-row';
     const info = document.createElement('div');
     info.innerHTML = '<div class="unit-name">' + n + '</div><div class="unit-sub">' +
-      (L.army || []).length + ' units · ' + total + ' pts' + (L.detachment ? (' · ' + L.detachment) : '') + '</div>';
+      (L.army || []).length + ' units · ' + total + ' pts' + (dets.length ? (' · ' + dets.join(', ')) : '') + '</div>';
     const btns = document.createElement('div');
     const load = document.createElement('button');
     load.className = 'tb-btn'; load.textContent = 'Load'; load.style.marginRight = '6px';
@@ -1184,21 +1280,11 @@ function decodeAndImport(){
 }
 
 /* ---- init ----------------------------------------------------------- */
-function populateDetachments(){
-  const sel = document.getElementById('detachmentSelect');
-  sel.innerHTML = '<option value="">— No detachment —</option>' +
-    DETACHMENTS.map(d => '<option value="' + d.name + '">' + d.name + '</option>').join('');
-}
-populateDetachments();
+renderDetachments();
 
-document.getElementById('detachmentSelect').addEventListener('change', e => {
-  const newDet = e.target.value || null;
-  if(newDet !== detachment){ army.forEach(a => { if(a.enhancement) a.enhancement = null; }); }
-  detachment = newDet;
-  renderArmy();
-});
+document.getElementById('detAdd').addEventListener('change', e => { addDetachment(e.target.value); e.target.value = ''; });
 document.getElementById('searchInput').addEventListener('input', e => renderUnitList(e.target.value));
-document.getElementById('pointsLimit').addEventListener('input', () => { updateTotal(); saveCurrent(); });
+document.getElementById('pointsLimit').addEventListener('input', () => { updateTotal(); renderDetachments(); saveCurrent(); });
 document.getElementById('clearBtn').addEventListener('click', () => {
   army = []; curListName = 'Untitled';
   renderArmy(); renderUnitList(document.getElementById('searchInput').value);
