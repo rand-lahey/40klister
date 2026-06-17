@@ -415,6 +415,14 @@
     width: 100%; height: 90px; background: #0b0f0a; border: 1px solid var(--border);
     color: var(--text); border-radius: 4px; font-family: monospace; font-size: 11px; padding: 8px; resize: vertical;
   }
+  .army-row .unit-info { cursor: pointer; }
+  .army-row .unit-info:hover .unit-name { color: var(--green); text-decoration: underline; }
+  .ds-mod { color: var(--green); font-weight: bold; }
+  .ds-ctx { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+  .ds-section-note { font-size: 11px; color: var(--gold); margin: 8px 0; line-height: 1.4; }
+  .ds-member { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+  .ds-member:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+  .ds-member-name { font-size: 15px; color: var(--green); font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
@@ -1039,6 +1047,8 @@ function buildArmyRow(a, attached){
     (canEnh ? '<button class="enh-btn" title="Enhancement">★</button>' : '') +
     (hasWargear ? '<button class="wargear-btn" title="Wargear options">⚙</button>' : '') +
     '<button class="remove-btn" title="Remove">✕</button>';
+  const info = row.querySelector('.unit-info');
+  if(info){ info.title = 'View datasheet'; info.onclick = () => openDatasheet(a); }
   if(hasWargear) row.querySelector('.wargear-btn').onclick = () => openWargearModal(a);
   if(canEnh){ const b = row.querySelector('.enh-btn'); if(b) b.onclick = () => openEnhancementModal(a); }
   if(isLead){ const b = row.querySelector('.attach-btn'); if(b) b.onclick = () => openAttachModal(a); }
@@ -1277,6 +1287,150 @@ function decodeAndImport(){
   applyState(s);
   saveCurrent();
   document.getElementById('shareOverlay').classList.add('hidden');
+}
+
+/* ---- datasheet viewer + army-wide stat modifiers ------------------- */
+// Army-wide detachment rules that change baseline characteristics (S, T, etc.).
+// Only always-on, profile-level modifiers go here; conditional/text rules are shown as notes.
+const DETACHMENT_EFFECTS = [
+  { detachment:"Cursed Legion", rule:"Cursed Legion",
+    match:{ keyword:"Destroyer Cult" },
+    mods:[ { scope:"weapon", stat:"S", delta:2 } ],
+    note:"Cursed Legion: all DESTROYER CULT models get +2 Strength on every weapon. (Conditional cascade: if a Destroyer Cult unit destroys or halves an enemy, your other non-Monster/non-Titanic Necrons also gain +2 S until end of turn — apply that by hand.)" },
+];
+
+function entryMatchesEffect(unitDef, match){
+  if(!unitDef || !unitDef.datasheet) return false;
+  const kws = (unitDef.datasheet.keywords||[]).map(k => k.toLowerCase());
+  if(match.keyword && !kws.includes(match.keyword.toLowerCase())) return false;
+  if(match.category && unitDef.category !== match.category) return false;
+  if(match.names && !match.names.map(n => n.toLowerCase()).includes(unitDef.name.toLowerCase())) return false;
+  return true;
+}
+function activeEffectsForUnit(unitDef){
+  return DETACHMENT_EFFECTS.filter(ef => detachments.includes(ef.detachment) && entryMatchesEffect(unitDef, ef.match));
+}
+
+// Enhancements (from the Necrons Faction Pack) that change baseline characteristics.
+// target:'bearer' = only the model with the enhancement; target:'unit' = every model in the attached bundle.
+const ENHANCEMENT_EFFECTS = {
+  "Destroyer Ankh": { note:"+2\" Move to the unit, and +2 Attacks on the bearer's melee weapons.",
+    mods:[ {scope:'model', stat:'M', delta:2, target:'unit'},
+           {scope:'weapon', stat:'A', delta:2, wtype:'melee', target:'bearer'} ] },
+  "Murdermind": { note:"+3\" Move to the bearer.",
+    mods:[ {scope:'model', stat:'M', delta:3, target:'bearer'} ] },
+  "Gauntlet of Compression": { note:"+6\" Range to the unit's ranged weapons.",
+    mods:[ {scope:'weapon', stat:'Range', delta:6, wtype:'ranged', target:'unit'} ] },
+};
+// Effects on `member` from enhancements carried by anyone in its bundle.
+function enhancementEffectsFor(member, bundle){
+  const out = [];
+  bundle.forEach(carrier => {
+    if(!carrier.enhancement) return;
+    const e = ENHANCEMENT_EFFECTS[carrier.enhancement.name];
+    if(!e) return;
+    const self = carrier.id === member.id;
+    const mods = e.mods.filter(m => self || m.target === 'unit');
+    if(mods.length) out.push({ mods, note: '★ ' + carrier.enhancement.name + (self ? '' : ' (from ' + carrier.unitName + ')') + ': ' + e.note });
+  });
+  return out;
+}
+function applyDelta(raw, mods){
+  const m = String(raw).match(/^(-?\d+)(.*)$/);   // leading integer + suffix (e.g. 24")
+  if(!m) return { value: raw, changed:false };
+  const d = mods.reduce((s, x) => s + x.delta, 0);
+  if(d === 0) return { value: raw, changed:false };
+  return { value: (parseInt(m[1], 10) + d) + m[2], changed:true };
+}
+// Which weapons a weapon-scope mod applies to (melee vs ranged).
+function wtypeMatches(mod, melee){
+  if(!mod.wtype || mod.wtype === 'all') return true;
+  return mod.wtype === (melee ? 'melee' : 'ranged');
+}
+function statGridMod(stats, effects){
+  const order = ['M','T','SV','W','LD','OC'];
+  const byStat = {};
+  effects.forEach(ef => ef.mods.forEach(m => { if(m.scope === 'model'){ (byStat[m.stat] = byStat[m.stat] || []).push(m); } }));
+  const cells = order.filter(k => stats && stats[k]).map(k => {
+    let val = stats[k], cls = '';
+    if(byStat[k]){ const r = applyDelta(stats[k], byStat[k]); val = r.value; cls = r.changed ? ' ds-mod' : ''; }
+    return '<div class="stat-cell"><div class="stat-label">'+k+'</div><div class="stat-value'+cls+'">'+val+'</div></div>';
+  }).join('');
+  return '<div class="stat-grid">'+cells+'</div>';
+}
+function weaponTableMod(title, weapons, melee, effects){
+  if(!weapons || weapons.length === 0) return '';
+  const skillCol = melee ? 'WS' : 'BS';
+  const wMods = {};
+  effects.forEach(ef => ef.mods.forEach(m => {
+    if(m.scope === 'weapon' && wtypeMatches(m, melee)){ (wMods[m.stat] = wMods[m.stat] || []).push(m); }
+  }));
+  const cell = (w, key) => {
+    const raw = (w[key] !== undefined && w[key] !== null && w[key] !== '') ? w[key] : '-';
+    if(wMods[key]){ const r = applyDelta(raw, wMods[key]); return '<span class="'+(r.changed ? 'ds-mod' : '')+'">'+r.value+'</span>'; }
+    return raw;
+  };
+  const rows = weapons.map(w => '<tr>'+
+    '<td>'+w.name+'</td>'+
+    '<td>'+cell(w,'Range')+'</td>'+
+    '<td>'+cell(w,'A')+'</td>'+
+    '<td>'+(w[skillCol]||'-')+'</td>'+
+    '<td>'+cell(w,'S')+'</td>'+
+    '<td>'+cell(w,'AP')+'</td>'+
+    '<td>'+cell(w,'D')+'</td>'+
+    '<td>'+((w.Keywords && w.Keywords !== '-') ? w.Keywords : '–')+'</td>'+
+  '</tr>').join('');
+  return '<div class="section-title">'+title+'</div><table class="weapon-table">'+
+    '<thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>'+skillCol+'</th><th>S</th><th>AP</th><th>D</th><th>Keywords</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>';
+}
+function bundleFor(entry){
+  let host = entry;
+  if(entry.attachedTo){ const h = army.find(a => a.id === entry.attachedTo); if(h) host = h; }
+  return [host].concat(army.filter(a => a.attachedTo === host.id));
+}
+function memberDatasheetHTML(entry, highlightId, bundle){
+  const u = unitDefOf(entry);
+  if(!u || !u.datasheet) return '';
+  const ds = u.datasheet;
+  const detEffects = activeEffectsForUnit(u);
+  const enhEffects = enhancementEffectsFor(entry, bundle || [entry]);
+  const effects = detEffects.concat(enhEffects);
+  let html = '<div class="ds-member">';
+  html += '<div class="ds-member-name">'+(entry.id === highlightId ? '▸ ' : '')+entry.unitName+
+    (entry.attachedTo ? ' <span class="attached-tag">attached</span>' : '')+'</div>';
+  if(entry.enhancement && !ENHANCEMENT_EFFECTS[entry.enhancement.name]){
+    html += '<div class="ds-section-note">★ Enhancement: '+entry.enhancement.name+' (+'+entry.enhancement.cost+' pts)'+
+      (entry.enhancement.upgrade ? ' [Upgrade]' : '')+' — see your detachment rules for its effect.</div>';
+  }
+  html += statGridMod(ds.stats || {}, effects);
+  html += keywordChips(ds.keywords);
+  detEffects.forEach(ef => { html += '<div class="ds-section-note">⚙ '+ef.note+'</div>'; });
+  enhEffects.forEach(ef => { html += '<div class="ds-section-note">'+ef.note+'</div>'; });
+  html += abilitiesBlock(ds.abilities);
+  html += weaponTableMod('Ranged Weapons', ds.rangedWeapons, false, effects);
+  html += weaponTableMod('Melee Weapons', ds.meleeWeapons, true, effects);
+  html += '</div>';
+  return html;
+}
+function openDatasheet(entry){
+  const members = bundleFor(entry);
+  document.getElementById('modalCat').textContent = members.length > 1 ? 'Combined Unit · Datasheet' : 'Datasheet';
+  document.getElementById('modalName').textContent = entry.unitName;
+  let html = '';
+  const dets = selectedDets();
+  if(dets.length){
+    html += '<div class="ds-ctx">Active detachments: '+dets.map(d => d.name+' ('+d.disp+')').join(' · ')+
+      '. Stat changes from army-wide rules are shown in <span class="ds-mod">green</span>.</div>';
+  }
+  if(members.length > 1){
+    html += '<div class="ds-ctx">Fielded together: '+members.map(m => m.unitName).join(' + ')+
+      '. Attached Leaders/Support add their abilities to the unit.</div>';
+  }
+  members.forEach(m => { html += memberDatasheetHTML(m, entry.id, members); });
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalAdd').style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- init ----------------------------------------------------------- */
