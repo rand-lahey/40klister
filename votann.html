@@ -183,6 +183,18 @@
     line-height: 1;
   }
   .remove-btn:hover { background: #5a1f1f; }
+  .wargear-btn {
+    background: #1a2b14;
+    color: var(--green);
+    border: 1px solid var(--green-dim);
+    border-radius: 4px;
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .wargear-btn:hover { background: #233a1a; }
   .army-footer {
     padding: 14px;
     border-top: 2px solid var(--border);
@@ -593,6 +605,7 @@ function openModal(unit) {
   }
   body.appendChild(warn);
 
+  document.getElementById('modalAdd').textContent = 'Add to Army';
   document.getElementById('modalAdd').onclick = () => {
     const sizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
     const size = unit.sizes[sizeIdx];
@@ -602,7 +615,9 @@ function openModal(unit) {
       unitName: unit.name,
       category: unit.category,
       models: size.models,
+      basePoints: price,
       points: price,
+      wargear: [],
     });
     closeModal();
     renderUnitList(document.getElementById('searchInput').value);
@@ -615,6 +630,78 @@ function openModal(unit) {
 function closeModal() {
   document.getElementById('overlay').classList.add('hidden');
   activeUnit = null;
+}
+
+function openWargearModal(entry) {
+  const unit = UNITS.find(u => u.name === entry.unitName);
+  if (!unit || !unit.wargear || unit.wargear.length === 0) return;
+  document.getElementById('modalCat').textContent = 'Wargear Options';
+  document.getElementById('modalName').textContent = entry.unitName;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = "";
+
+  const note = document.createElement('div');
+  note.className = 'modal-note';
+  note.textContent = 'Choose optional wargear for this unit.';
+  body.appendChild(note);
+
+  const wgInputs = [];
+  unit.wargear.forEach((wg) => {
+    const existing = (entry.wargear || []).find(w => w.name === wg.name);
+    const row = document.createElement('div');
+    row.className = 'wargear-row';
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.justifyContent = 'space-between';
+    row.style.gap = '10px';
+    row.style.margin = '10px 0';
+    const label = document.createElement('span');
+    label.textContent = wg.name + ' (+' + wg.cost + ' pts each)';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.value = existing ? existing.qty : 0;
+    input.style.width = '60px';
+    row.appendChild(label);
+    row.appendChild(input);
+    body.appendChild(row);
+    wgInputs.push(input);
+  });
+
+  const priceField = document.createElement('div');
+  priceField.className = 'modal-field';
+  priceField.innerHTML = '<label>Total Cost</label><div class="modal-price" id="modalPrice"></div>';
+  body.appendChild(priceField);
+
+  function updateWgPrice() {
+    let sum = 0;
+    wgInputs.forEach((inp, i) => { sum += Math.max(0, parseInt(inp.value) || 0) * unit.wargear[i].cost; });
+    document.getElementById('modalPrice').textContent = (entry.basePoints + sum) + ' pts';
+  }
+  wgInputs.forEach(inp => inp.addEventListener('input', updateWgPrice));
+  updateWgPrice();
+
+  const warn = document.createElement('div');
+  warn.className = 'modal-warn';
+  warn.id = 'modalWarn';
+  body.appendChild(warn);
+
+  document.getElementById('modalAdd').textContent = 'Save Wargear';
+  document.getElementById('modalAdd').onclick = () => {
+    const chosen = unit.wargear.map((wg, i) => ({
+      name: wg.name,
+      qty: Math.max(0, parseInt(wgInputs[i].value) || 0),
+      cost: wg.cost,
+    })).filter(w => w.qty > 0);
+    const wgSum = chosen.reduce((s, w) => s + w.qty * w.cost, 0);
+    entry.wargear = chosen;
+    entry.points = entry.basePoints + wgSum;
+    document.getElementById('modalAdd').textContent = 'Add to Army';
+    closeModal();
+    renderArmy();
+  };
+
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 function removeFromArmy(id) {
@@ -633,14 +720,22 @@ function renderArmy() {
     army.forEach(a => {
       const row = document.createElement('div');
       row.className = 'army-row';
+      const unitDef = UNITS.find(u => u.name === a.unitName);
+      const hasWargear = unitDef && unitDef.wargear && unitDef.wargear.length > 0;
+      const wgLine = (a.wargear && a.wargear.length > 0)
+        ? '<div class="cat-badge">' + a.wargear.map(w => '+' + w.qty + ' ' + w.name).join(', ') + '</div>'
+        : '';
       row.innerHTML = `
         <div class="unit-info">
           <div class="unit-name">${a.unitName}</div>
           <div class="cat-badge">${a.category} \u00b7 ${a.models} ${a.models === '1' ? 'model' : 'models'}</div>
+          ${wgLine}
         </div>
         <div class="unit-pts">${a.points} pts</div>
+        ${hasWargear ? '<button class="wargear-btn" title="Wargear options">\u2699</button>' : ''}
         <button class="remove-btn" title="Remove">\u2715</button>
       `;
+      if (hasWargear) row.querySelector('.wargear-btn').onclick = () => openWargearModal(a);
       row.querySelector('.remove-btn').onclick = () => removeFromArmy(a.id);
       container.appendChild(row);
     });
