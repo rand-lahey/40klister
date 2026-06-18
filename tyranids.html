@@ -355,6 +355,74 @@
     color: #6a7a5e;
     cursor: not-allowed;
   }
+
+  .toolbar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+  }
+  .toolbar .tb-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .toolbar select {
+    background: #0b0f0a; border: 1px solid var(--border); color: var(--text);
+    padding: 6px 8px; border-radius: 4px; font-size: 13px;
+  }
+  .toolbar .spacer { flex: 1; }
+  .det-list { display: flex; gap: 6px; flex-wrap: wrap; }
+  .det-chip {
+    display: inline-flex; align-items: center; gap: 7px; background: var(--panel2);
+    border: 1px solid var(--green-dim); border-radius: 14px; padding: 3px 10px; font-size: 12px; color: var(--text);
+  }
+  .det-chip .dp { color: var(--gold); font-weight: bold; }
+  .det-chip .disp { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .det-chip .uni { color: #b07fd0; font-size: 10px; text-transform: uppercase; }
+  .det-chip .x { cursor: pointer; color: var(--text-dim); font-weight: bold; }
+  .det-chip .x:hover { color: #e25a3a; }
+  .dp-readout { font-size: 12px; color: var(--text-dim); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; white-space: nowrap; }
+  .dp-readout.over { color: #e25a3a; border-color: #5a1f1f; }
+  .det-warn { color: #e25a3a; font-size: 12px; padding: 0 16px; min-height: 0; }
+  .det-warn:not(:empty) { padding: 8px 16px; }
+  .tb-btn {
+    background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
+  }
+  .tb-btn:hover { border-color: var(--green-dim); color: var(--green); }
+  .tb-btn:disabled { cursor: default; }
+  .enh-badge {
+    display: inline-block; margin-top: 4px; font-size: 11px; color: #0b0f0a;
+    background: var(--gold); padding: 1px 6px; border-radius: 3px;
+  }
+  .enh-badge.upg { background: #b07fd0; }
+  .enh-btn {
+    background: #2a230d; border: 1px solid var(--gold); color: var(--gold);
+    border-radius: 4px; cursor: pointer; font-size: 13px; width: 26px; height: 26px; flex: none;
+  }
+  .enh-btn:hover { background: #3a3010; }
+  .attach-btn {
+    background: #161d12; border: 1px solid var(--border); color: var(--text-dim);
+    border-radius: 4px; cursor: pointer; font-size: 11px; padding: 2px 8px; flex: none; white-space: nowrap;
+  }
+  .attach-btn:hover { border-color: var(--green-dim); color: var(--green); }
+  .army-row.attached { margin-left: 22px; border-left: 2px solid var(--green-dim); background: #0e140a; }
+  .attached-tag { font-size: 10px; color: var(--green-dim); text-transform: uppercase; letter-spacing: 1px; }
+  .lists-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+  }
+  .text-input {
+    width: 100%; background: #0b0f0a; border: 1px solid var(--border); color: var(--text);
+    padding: 8px; border-radius: 4px; font-size: 13px;
+  }
+  .code-area {
+    width: 100%; height: 90px; background: #0b0f0a; border: 1px solid var(--border);
+    color: var(--text); border-radius: 4px; font-family: monospace; font-size: 11px; padding: 8px; resize: vertical;
+  }
+  .army-row .unit-info { cursor: pointer; }
+  .army-row .unit-info:hover .unit-name { color: var(--green); text-decoration: underline; }
+  .ds-mod { color: var(--green); font-weight: bold; }
+  .ds-ctx { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+  .ds-section-note { font-size: 11px; color: var(--gold); margin: 8px 0; line-height: 1.4; }
+  .ds-member { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
+  .ds-member:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+  .ds-member-name { font-size: 15px; color: var(--green); font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
@@ -371,6 +439,18 @@
     <div class="points-total ok" id="totalDisplay">0 / 2000</div>
   </div>
 </header>
+
+<div class="toolbar">
+  <span class="tb-label">Detachments</span>
+  <div id="detList" class="det-list"></div>
+  <select id="detAdd"></select>
+  <span class="dp-readout" id="dpReadout">DP 0 / 3</span>
+  <span class="spacer"></span>
+  <span class="tb-label" id="listNameTag"></span>
+  <button class="tb-btn" id="listsBtn">Saved lists</button>
+  <button class="tb-btn" id="shareBtn">Share / Import</button>
+</div>
+<div class="det-warn" id="detWarn"></div>
 
 <main>
   <div class="col">
@@ -405,6 +485,52 @@
     <div class="modal-footer">
       <button class="btn" id="modalCancel">Cancel</button>
       <button class="btn btn-primary" id="modalAdd">Add to Army</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="overlay hidden" id="listsOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-cat">Saved Army Lists</div>
+      <h2>Your lists (saved in this browser)</h2>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Save current army as</label>
+        <input type="text" id="listNameInput" class="text-input" placeholder="e.g. Hypercrypt 2000pts">
+      </div>
+      <div id="listsContainer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="listsClose">Close</button>
+      <button class="btn btn-primary" id="listsSave">Save current</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="shareOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-cat">Share &amp; Import</div>
+      <h2>Army code</h2>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label>Your army code &mdash; copy and send it to anyone</label>
+        <textarea class="code-area" id="exportCode" readonly></textarea>
+      </div>
+      <button class="tb-btn" id="copyCodeBtn">Copy code</button>
+      <div class="modal-field" style="margin-top:16px;">
+        <label>Paste a code to load someone's army</label>
+        <textarea class="code-area" id="importCode" placeholder="Paste army code here"></textarea>
+      </div>
+      <div class="modal-warn" id="importWarn"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="shareClose">Close</button>
+      <button class="btn btn-primary" id="importBtn">Import code</button>
     </div>
   </div>
 </div>
@@ -752,13 +878,805 @@ function updateTotal() {
   totalEl.className = 'points-total ' + (total > limit ? 'over' : 'ok');
 }
 
-document.getElementById('searchInput').addEventListener('input', e => renderUnitList(e.target.value));
-document.getElementById('pointsLimit').addEventListener('input', updateTotal);
-document.getElementById('clearBtn').addEventListener('click', () => { army = []; renderArmy(); renderUnitList(document.getElementById('searchInput').value); });
-document.getElementById('modalCancel').addEventListener('click', closeModal);
-document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
+/* ============================================================
+   Persistence + multi-detachment (DP) + enhancements + attachments
+   ============================================================ */
+const FACTION_KEY = 'tyranids';
+let detachments = [];          // array of detachment names
+let curListName = 'Untitled';
 
-renderUnitList('');
+// dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
+// enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
+// `elig` = who may take it (from the rule's "X only" clause): tokens match a keyword or the
+// unit name; a nested array means ALL those keywords are required; "NECRONS" = any unit.
+// Detachments without elig data (the 5 codex ones) fall back to generic Character/Upgrade rules.
+const DETACHMENTS = [
+ {
+  "name": "Ambush Predators",
+  "dp": 1,
+  "disp": "Disruption",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Cryptophotaic Camouflage",
+    "cost": 15,
+    "upgrade": true
+   },
+   {
+    "name": "Encircling Horrors",
+    "cost": 20,
+    "upgrade": true
+   }
+  ]
+ },
+ {
+  "name": "Assimilation Swarm",
+  "dp": 2,
+  "disp": "Priority Assets",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Biophagic Flow",
+    "cost": 10
+   },
+   {
+    "name": "Instinctive Defence",
+    "cost": 15
+   },
+   {
+    "name": "Parasitic Biomorphology",
+    "cost": 25
+   },
+   {
+    "name": "Regenerating Monstrosity",
+    "cost": 20
+   }
+  ]
+ },
+ {
+  "name": "Crusher Stampede",
+  "dp": 2,
+  "disp": "Purge the Foe",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Enraged Reserves",
+    "cost": 20
+   },
+   {
+    "name": "Monstrous Nemesis",
+    "cost": 25
+   },
+   {
+    "name": "Null Nodules",
+    "cost": 10
+   },
+   {
+    "name": "Ominous Presence",
+    "cost": 15
+   }
+  ]
+ },
+ {
+  "name": "Invasion Fleet",
+  "dp": 3,
+  "disp": "Take and Hold",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Adaptive Biology",
+    "cost": 25
+   },
+   {
+    "name": "Alien Cunning",
+    "cost": 30
+   },
+   {
+    "name": "Perfectly Adapted",
+    "cost": 15
+   },
+   {
+    "name": "Synaptic Linchpin",
+    "cost": 20
+   }
+  ]
+ },
+ {
+  "name": "Subterranean Assault",
+  "dp": 3,
+  "disp": "Disruption",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Synaptic Strategy",
+    "cost": 15
+   },
+   {
+    "name": "Tremor Senses",
+    "cost": 20
+   },
+   {
+    "name": "Trygon Prime",
+    "cost": 20
+   },
+   {
+    "name": "Vanguard Intellect",
+    "cost": 15
+   }
+  ]
+ },
+ {
+  "name": "Synaptic Nexus",
+  "dp": 2,
+  "disp": "Disruption",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Power of the Hive Mind",
+    "cost": 10
+   },
+   {
+    "name": "Psychostatic Disruption",
+    "cost": 30
+   },
+   {
+    "name": "Synaptic Control",
+    "cost": 20
+   },
+   {
+    "name": "The Dirgeheart of Kharis",
+    "cost": 15
+   }
+  ]
+ },
+ {
+  "name": "Talons of the Norn Queen",
+  "dp": 1,
+  "disp": "Take and Hold",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Destabilising Predation",
+    "cost": 20,
+    "upgrade": true
+   },
+   {
+    "name": "Synaptoprescience",
+    "cost": 25,
+    "upgrade": true
+   }
+  ]
+ },
+ {
+  "name": "Unending Swarm",
+  "dp": 2,
+  "disp": "Take and Hold",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Adrenalised Onslaught",
+    "cost": 15
+   },
+   {
+    "name": "Naturalised Camouflage",
+    "cost": 30
+   },
+   {
+    "name": "Piercing Talons",
+    "cost": 25
+   },
+   {
+    "name": "Relentless Hunger",
+    "cost": 20
+   }
+  ]
+ },
+ {
+  "name": "Vanguard Onslaught",
+  "dp": 2,
+  "disp": "Reconnaissance",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Chameleonic",
+    "cost": 15
+   },
+   {
+    "name": "Hunting Grounds",
+    "cost": 20
+   },
+   {
+    "name": "Neuronode",
+    "cost": 20
+   },
+   {
+    "name": "Stalker",
+    "cost": 10
+   }
+  ]
+ },
+ {
+  "name": "Warrior Bioform Onslaught",
+  "dp": 1,
+  "disp": "Take and Hold",
+  "unique": null,
+  "enh": [
+   {
+    "name": "Elevated Might",
+    "cost": 30
+   },
+   {
+    "name": "Ocular Adaptation",
+    "cost": 20
+   }
+  ]
+ }
+];
+
+/* ---- detachment helpers -------------------------------------------- */
+function getDet(name){ return DETACHMENTS.find(d => d.name === name); }
+function selectedDets(){ return detachments.map(getDet).filter(Boolean); }
+function dpUsed(){ return selectedDets().reduce((s, d) => s + d.dp, 0); }
+function dpBudget(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 3 : 2; }
+function enhLimit(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 4 : 2; }
+function enhPool(){
+  const map = {};
+  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade, elig:e.elig}; }));
+  return Object.values(map);
+}
+// --- enhancement eligibility (which units may take which enhancement/upgrade) ---
+function normTok(s){ return String(s).toLowerCase().replace(/’/g, "'").replace(/‑/g, '-'); }
+function unitHasKeyword(unitDef, tok){
+  return (unitDef.datasheet.keywords||[]).some(k => normTok(k) === normTok(tok));
+}
+function unitNameHas(unitDef, tok){ return normTok(unitDef.name).indexOf(normTok(tok)) !== -1; }
+function matchToken(unitDef, tok){
+  if(Array.isArray(tok)) return tok.every(t => unitHasKeyword(unitDef, t));   // compound: all keywords
+  if(String(tok).toUpperCase() === 'NECRONS') return true;                    // any unit in this faction
+  return unitHasKeyword(unitDef, tok) || unitNameHas(unitDef, tok);
+}
+function matchTokenByName(unitDef, tok){
+  if(Array.isArray(tok) || String(tok).toUpperCase() === 'NECRONS') return false;
+  return unitNameHas(unitDef, tok);
+}
+// True Epic Hero = has the "Epic Hero" keyword (the datasheet's epicHero flag also marks
+// unique non-Epic-Hero models like the Hexmark Destroyer, which CAN take enhancements).
+function isEpicHero(entry){
+  const u = unitDefOf(entry);
+  return !!(u && u.datasheet && (u.datasheet.keywords||[]).map(k => k.toLowerCase()).includes('epic hero'));
+}
+function unitEligibleForEnh(entry, enh){
+  const u = unitDefOf(entry);
+  if(!u) return false;
+  if(enh.elig){
+    const toks = enh.elig;
+    if(enh.upgrade) return !isCharacter(entry) && toks.some(t => matchToken(u, t));   // upgrades: named non-Character units
+    if(!isCharacter(entry)) return false;                                             // enhancements: Characters only
+    if(isEpicHero(entry)) return toks.some(t => matchTokenByName(u, t));              // Epic Heroes only if named explicitly
+    return toks.some(t => matchToken(u, t));
+  }
+  // Fallback for detachments without eligibility data
+  if(enh.upgrade) return !isCharacter(entry);
+  return isCharacter(entry) && !isEpicHero(entry);
+}
+function distinctEnhNames(exceptId){
+  const s = new Set();
+  army.forEach(e => { if(e.enhancement && e.id !== exceptId) s.add(e.enhancement.name); });
+  return s;
+}
+function pruneEnhancements(){
+  const names = new Set(enhPool().map(e => e.name));
+  army.forEach(e => { if(e.enhancement && !names.has(e.enhancement.name)) e.enhancement = null; });
+}
+function setWarn(msg){
+  const w = document.getElementById('detWarn');
+  w.textContent = msg || '';
+  if(msg) setTimeout(() => { if(w.textContent === msg) w.textContent = ''; }, 4500);
+}
+function addDetachment(name){
+  if(!name || detachments.includes(name)) return;
+  const cand = getDet(name); if(!cand) return;
+  const cur = selectedDets();
+  if(cand.dp === 3 && cur.length > 0){ setWarn('A 3 DP detachment must be taken on its own.'); return; }
+  if(cur.some(d => d.dp === 3)){ setWarn('You already have a 3 DP detachment, which must be fielded alone.'); return; }
+  if(cand.unique && cur.some(d => d.unique === cand.unique)){
+    setWarn('You cannot combine two detachments that share the keyword: ' + cand.unique + '.'); return;
+  }
+  detachments.push(name);
+  setWarn('');
+  pruneEnhancements();
+  renderDetachments(); renderArmy();
+}
+function removeDetachment(name){
+  detachments = detachments.filter(n => n !== name);
+  pruneEnhancements();
+  renderDetachments(); renderArmy();
+}
+function renderDetachments(){
+  const list = document.getElementById('detList');
+  list.innerHTML = '';
+  selectedDets().forEach(d => {
+    const chip = document.createElement('span');
+    chip.className = 'det-chip';
+    chip.innerHTML = '<span>' + d.name + '</span>' +
+      '<span class="dp">' + d.dp + 'DP</span>' +
+      '<span class="disp">' + d.disp + '</span>' +
+      (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
+      '<span class="x" title="Remove">✕</span>';
+    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    list.appendChild(chip);
+  });
+  const sel = document.getElementById('detAdd');
+  const avail = DETACHMENTS.filter(d => !detachments.includes(d.name));
+  sel.innerHTML = '<option value="">+ Add detachment…</option>' +
+    avail.map(d => '<option value="' + d.name + '">' + d.name + '  (' + d.dp + 'DP · ' + d.disp + (d.unique ? (' · ' + d.unique) : '') + ')</option>').join('');
+  const used = dpUsed(), budget = dpBudget();
+  const ro = document.getElementById('dpReadout');
+  ro.textContent = 'DP ' + used + ' / ' + budget;
+  ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+
+/* ---- unit / character helpers -------------------------------------- */
+function unitDefOf(entry){ return UNITS.find(u => u.name === entry.unitName); }
+function isCharacter(entry){
+  const u = unitDefOf(entry);
+  return !!(u && u.datasheet && (u.datasheet.keywords||[]).map(k=>k.toLowerCase()).includes('character'));
+}
+function parseLeaderTargets(unit){
+  if(!unit || !unit.datasheet) return [];
+  const ab = (unit.datasheet.abilities||[]).find(a => a.name.toLowerCase() === 'leader');
+  if(!ab) return [];
+  const up = ab.text.toUpperCase();
+  const out = [];
+  UNITS.forEach(u => { if(up.includes(u.name.toUpperCase())) out.push(u.name); });
+  return out;
+}
+function leaderTargetsFor(entry){
+  if(!entry.leaderTargets) entry.leaderTargets = parseLeaderTargets(unitDefOf(entry));
+  return entry.leaderTargets;
+}
+function isLeaderEntry(entry){ return leaderTargetsFor(entry).length > 0; }
+function eligibleBodyguards(leader){
+  const tg = leaderTargetsFor(leader);
+  return army.filter(e => e.id !== leader.id && tg.includes(e.unitName));
+}
+
+/* ---- army rendering ------------------------------------------------- */
+function canTakeEnhancement(entry){
+  if(detachments.length === 0) return false;
+  return enhPool().some(e => unitEligibleForEnh(entry, e));
+}
+function buildArmyRow(a, attached){
+  const row = document.createElement('div');
+  row.className = 'army-row' + (attached ? ' attached' : '');
+  const unitDef = unitDefOf(a);
+  const hasWargear = unitDef && unitDef.wargear && unitDef.wargear.length > 0;
+  const wgLine = (a.wargear && a.wargear.length > 0)
+    ? '<div class="cat-badge">' + a.wargear.map(w => '+' + w.qty + ' ' + w.name).join(', ') + '</div>' : '';
+  const enhLine = a.enhancement
+    ? '<div class="enh-badge' + (a.enhancement.upgrade ? ' upg' : '') + '">★ ' + a.enhancement.name + ' (+' + a.enhancement.cost + ')</div>' : '';
+  const canEnh = canTakeEnhancement(a);
+  const isLead = isLeaderEntry(a);
+  const ptsTotal = a.points + (a.enhancement ? a.enhancement.cost : 0);
+  const tag = attached ? '<span class="attached-tag">▸ leading</span> ' : '';
+  row.innerHTML =
+    '<div class="unit-info">' +
+      '<div class="unit-name">' + tag + a.unitName + '</div>' +
+      '<div class="cat-badge">' + a.category + ' · ' + a.models + ' ' + (a.models === '1' ? 'model' : 'models') + '</div>' +
+      wgLine + enhLine +
+    '</div>' +
+    '<div class="unit-pts">' + ptsTotal + ' pts</div>' +
+    (isLead ? '<button class="attach-btn" title="Attach to a unit">' + (a.attachedTo ? 'Leading ▾' : 'Lead ▾') + '</button>' : '') +
+    (canEnh ? '<button class="enh-btn" title="Enhancement">★</button>' : '') +
+    (hasWargear ? '<button class="wargear-btn" title="Wargear options">⚙</button>' : '') +
+    '<button class="remove-btn" title="Remove">✕</button>';
+  const info = row.querySelector('.unit-info');
+  if(info){ info.title = 'View datasheet'; info.onclick = () => openDatasheet(a); }
+  if(hasWargear) row.querySelector('.wargear-btn').onclick = () => openWargearModal(a);
+  if(canEnh){ const b = row.querySelector('.enh-btn'); if(b) b.onclick = () => openEnhancementModal(a); }
+  if(isLead){ const b = row.querySelector('.attach-btn'); if(b) b.onclick = () => openAttachModal(a); }
+  row.querySelector('.remove-btn').onclick = () => removeFromArmy(a.id);
+  return row;
+}
+function renderArmy(){
+  const container = document.getElementById('armyList');
+  const countEl = document.getElementById('unitCount');
+  army.forEach(e => { if(e.attachedTo && !army.find(b => b.id === e.attachedTo)) e.attachedTo = null; });
+  if(army.length === 0){
+    container.innerHTML = '<div class="army-empty">No units added yet. Click a unit to add it.</div>';
+  } else {
+    container.innerHTML = '';
+    const byHost = {};
+    army.forEach(e => { if(e.attachedTo){ (byHost[e.attachedTo] = byHost[e.attachedTo] || []).push(e); } });
+    army.forEach(a => {
+      if(a.attachedTo) return;
+      container.appendChild(buildArmyRow(a, false));
+      (byHost[a.id] || []).forEach(lead => container.appendChild(buildArmyRow(lead, true)));
+    });
+  }
+  countEl.textContent = army.length + (army.length === 1 ? ' unit' : ' units');
+  const tag = document.getElementById('listNameTag');
+  if(tag) tag.textContent = curListName && curListName !== 'Untitled' ? ('List: ' + curListName) : '';
+  updateTotal();
+  saveCurrent();
+}
+function updateTotal(){
+  const total = army.reduce((s, a) => s + a.points + (a.enhancement ? a.enhancement.cost : 0), 0);
+  const limit = parseInt(document.getElementById('pointsLimit').value) || 0;
+  const el = document.getElementById('totalDisplay');
+  el.textContent = total + ' / ' + limit;
+  el.className = 'points-total ' + (total > limit ? 'over' : 'ok');
+}
+function removeFromArmy(id){
+  army = army.filter(a => a.id !== id);
+  army.forEach(e => { if(e.attachedTo === id) e.attachedTo = null; });
+  renderArmy();
+  renderUnitList(document.getElementById('searchInput').value);
+}
+function closeModal(){
+  document.getElementById('overlay').classList.add('hidden');
+  const add = document.getElementById('modalAdd');
+  add.style.display = '';
+  add.textContent = 'Add to Army';
+  activeUnit = null;
+}
+
+/* ---- attachment modal ---------------------------------------------- */
+function openAttachModal(leader){
+  const targets = eligibleBodyguards(leader);
+  document.getElementById('modalCat').textContent = 'Attach Leader';
+  document.getElementById('modalName').textContent = leader.unitName;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+  const note = document.createElement('div');
+  note.className = 'modal-note';
+  note.textContent = targets.length
+    ? 'Choose a unit for this character to lead:'
+    : 'No eligible units are in your army yet. Add one of: ' + leaderTargetsFor(leader).join(', ') + '.';
+  body.appendChild(note);
+  targets.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tb-btn';
+    b.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;';
+    const ledBy = army.find(x => x.attachedTo === t.id && x.id !== leader.id);
+    let label = t.unitName;
+    if(leader.attachedTo === t.id) label = '✓ ' + label;
+    if(ledBy) label += '  (already led by ' + ledBy.unitName + ')';
+    b.textContent = label;
+    b.onclick = () => { leader.attachedTo = t.id; closeModal(); renderArmy(); };
+    body.appendChild(b);
+  });
+  if(leader.attachedTo){
+    const d = document.createElement('button');
+    d.className = 'tb-btn';
+    d.style.cssText = 'display:block;width:100%;margin:12px 0 0;';
+    d.textContent = 'Detach (make independent)';
+    d.onclick = () => { leader.attachedTo = null; closeModal(); renderArmy(); };
+    body.appendChild(d);
+  }
+  document.getElementById('modalAdd').style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+/* ---- enhancement modal --------------------------------------------- */
+function openEnhancementModal(entry){
+  if(detachments.length === 0){ alert('Add a detachment first.'); return; }
+  const opts = enhPool().filter(e => unitEligibleForEnh(entry, e));
+  const onlyUpgrades = opts.length > 0 && opts.every(e => e.upgrade);
+  document.getElementById('modalCat').textContent = onlyUpgrades ? 'Upgrade' : 'Enhancement';
+  document.getElementById('modalName').textContent = entry.unitName;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = '';
+  const note = document.createElement('div');
+  note.className = 'modal-note';
+  note.textContent = 'Enhancement limit for this battle size: ' + enhLimit() +
+    '. ' + (onlyUpgrades ? 'Upgrades go on the eligible non-Character unit.' : 'One per Character; each enhancement used once.') +
+    ' Only options this unit is eligible for are shown.';
+  body.appendChild(note);
+  const usedByOthers = distinctEnhNames(entry.id);
+  opts.forEach(enh => {
+    const selected = entry.enhancement && entry.enhancement.name === enh.name;
+    const takenUnique = !enh.upgrade && usedByOthers.has(enh.name);
+    const b = document.createElement('button');
+    b.className = 'tb-btn';
+    b.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;';
+    b.textContent = (selected ? '✓ ' : '') + enh.name + '  (+' + enh.cost + ' pts)' +
+      (enh.upgrade ? '  [Upgrade]' : '') + (takenUnique ? '  — in use' : '');
+    if(takenUnique){ b.disabled = true; b.style.opacity = 0.45; }
+    b.onclick = () => {
+      if(selected){ entry.enhancement = null; closeModal(); renderArmy(); return; }
+      const names = distinctEnhNames(entry.id);
+      const willAddName = !names.has(enh.name);
+      if(willAddName && names.size >= enhLimit()){ alert('Enhancement limit for this battle size is ' + enhLimit() + '.'); return; }
+      entry.enhancement = { name: enh.name, cost: enh.cost, upgrade: !!enh.upgrade };
+      closeModal(); renderArmy();
+    };
+    body.appendChild(b);
+  });
+  if(entry.enhancement){
+    const d = document.createElement('button');
+    d.className = 'tb-btn';
+    d.style.cssText = 'display:block;width:100%;margin:12px 0 0;';
+    d.textContent = 'Remove enhancement';
+    d.onclick = () => { entry.enhancement = null; closeModal(); renderArmy(); };
+    body.appendChild(d);
+  }
+  document.getElementById('modalAdd').style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+/* ---- serialization / persistence ----------------------------------- */
+function serialize(){
+  return {
+    v: 2, faction: FACTION_KEY, name: curListName,
+    detachments: detachments.slice(),
+    pointsLimit: parseInt(document.getElementById('pointsLimit').value) || 0,
+    nextId: nextId,
+    army: army.map(a => ({
+      id: a.id, unitName: a.unitName, category: a.category, models: a.models,
+      basePoints: a.basePoints, points: a.points,
+      wargear: a.wargear || [], enhancement: a.enhancement || null, attachedTo: a.attachedTo || null
+    }))
+  };
+}
+function applyState(s){
+  if(!s || s.faction !== FACTION_KEY) return false;
+  let dets = s.detachments;
+  if(!dets && s.detachment) dets = [s.detachment];   // migrate v1 single detachment
+  detachments = (dets || []).filter(n => getDet(n));
+  army = (s.army || []).map(a => ({
+    id: a.id, unitName: a.unitName, category: a.category, models: a.models,
+    basePoints: a.basePoints, points: a.points,
+    wargear: a.wargear || [], enhancement: a.enhancement || null, attachedTo: a.attachedTo || null,
+    leaderTargets: parseLeaderTargets(UNITS.find(u => u.name === a.unitName))
+  }));
+  nextId = s.nextId || (army.reduce((m, a) => Math.max(m, a.id), 0) + 1);
+  curListName = s.name || 'Untitled';
+  document.getElementById('pointsLimit').value = s.pointsLimit || 2000;
+  pruneEnhancements();
+  renderDetachments();
+  renderUnitList(document.getElementById('searchInput').value);
+  renderArmy();
+  return true;
+}
+function saveCurrent(){ try { localStorage.setItem(FACTION_KEY + '_current', JSON.stringify(serialize())); } catch(e){} }
+function loadCurrent(){
+  try { const raw = localStorage.getItem(FACTION_KEY + '_current'); if(raw) applyState(JSON.parse(raw)); } catch(e){}
+}
+
+/* ---- named lists ---------------------------------------------------- */
+function getLists(){ try { return JSON.parse(localStorage.getItem(FACTION_KEY + '_lists') || '{}'); } catch(e){ return {}; } }
+function setLists(o){ try { localStorage.setItem(FACTION_KEY + '_lists', JSON.stringify(o)); } catch(e){} }
+function openListsModal(){
+  document.getElementById('listNameInput').value = (curListName && curListName !== 'Untitled') ? curListName : '';
+  renderListsContainer();
+  document.getElementById('listsOverlay').classList.remove('hidden');
+}
+function renderListsContainer(){
+  const c = document.getElementById('listsContainer');
+  const lists = getLists();
+  const names = Object.keys(lists).sort();
+  if(names.length === 0){ c.innerHTML = '<div class="modal-note">No saved lists yet.</div>'; return; }
+  c.innerHTML = '';
+  names.forEach(n => {
+    const L = lists[n];
+    const total = (L.army || []).reduce((s, a) => s + (a.points || 0) + (a.enhancement ? a.enhancement.cost : 0), 0);
+    const dets = L.detachments || (L.detachment ? [L.detachment] : []);
+    const row = document.createElement('div');
+    row.className = 'lists-row';
+    const info = document.createElement('div');
+    info.innerHTML = '<div class="unit-name">' + n + '</div><div class="unit-sub">' +
+      (L.army || []).length + ' units · ' + total + ' pts' + (dets.length ? (' · ' + dets.join(', ')) : '') + '</div>';
+    const btns = document.createElement('div');
+    const load = document.createElement('button');
+    load.className = 'tb-btn'; load.textContent = 'Load'; load.style.marginRight = '6px';
+    load.onclick = () => { applyState(L); curListName = n; saveCurrent(); renderArmy(); document.getElementById('listsOverlay').classList.add('hidden'); };
+    const del = document.createElement('button');
+    del.className = 'tb-btn'; del.textContent = 'Delete';
+    del.onclick = () => { const l = getLists(); delete l[n]; setLists(l); renderListsContainer(); };
+    btns.appendChild(load); btns.appendChild(del);
+    row.appendChild(info); row.appendChild(btns);
+    c.appendChild(row);
+  });
+}
+function saveCurrentList(){
+  const name = (document.getElementById('listNameInput').value || '').trim();
+  if(!name){ alert('Enter a name for this list.'); return; }
+  curListName = name;
+  const lists = getLists();
+  lists[name] = serialize();
+  setLists(lists);
+  saveCurrent();
+  renderListsContainer();
+  renderArmy();
+}
+
+/* ---- share codes ---------------------------------------------------- */
+function encodeArmy(){ return btoa(unescape(encodeURIComponent(JSON.stringify(serialize())))); }
+function openShareModal(){
+  document.getElementById('exportCode').value = encodeArmy();
+  document.getElementById('importCode').value = '';
+  document.getElementById('importWarn').textContent = '';
+  document.getElementById('copyCodeBtn').textContent = 'Copy code';
+  document.getElementById('shareOverlay').classList.remove('hidden');
+}
+function decodeAndImport(){
+  const raw = (document.getElementById('importCode').value || '').trim();
+  const warn = document.getElementById('importWarn');
+  if(!raw){ warn.textContent = 'Paste a code first.'; return; }
+  let s;
+  try { s = JSON.parse(decodeURIComponent(escape(atob(raw)))); }
+  catch(e){ warn.textContent = 'That code is not valid.'; return; }
+  if(!s || s.faction !== FACTION_KEY){ warn.textContent = 'This code is for a different faction' + (s && s.faction ? (': ' + s.faction) : '') + '.'; return; }
+  applyState(s);
+  saveCurrent();
+  document.getElementById('shareOverlay').classList.add('hidden');
+}
+
+/* ---- datasheet viewer + army-wide stat modifiers ------------------- */
+// Army-wide detachment rules that change baseline characteristics (S, T, etc.).
+// Only always-on, profile-level modifiers go here; conditional/text rules are shown as notes.
+const DETACHMENT_EFFECTS = [];
+
+function entryMatchesEffect(unitDef, match){
+  if(!unitDef || !unitDef.datasheet) return false;
+  const kws = (unitDef.datasheet.keywords||[]).map(k => k.toLowerCase());
+  if(match.keyword && !kws.includes(match.keyword.toLowerCase())) return false;
+  if(match.category && unitDef.category !== match.category) return false;
+  if(match.names && !match.names.map(n => n.toLowerCase()).includes(unitDef.name.toLowerCase())) return false;
+  return true;
+}
+function activeEffectsForUnit(unitDef){
+  return DETACHMENT_EFFECTS.filter(ef => detachments.includes(ef.detachment) && entryMatchesEffect(unitDef, ef.match));
+}
+
+// Enhancements (from the Necrons Faction Pack) that change baseline characteristics.
+// target:'bearer' = only the model with the enhancement; target:'unit' = every model in the attached bundle.
+const ENHANCEMENT_EFFECTS = {};
+// Effects on `member` from enhancements carried by anyone in its bundle.
+function enhancementEffectsFor(member, bundle){
+  const out = [];
+  bundle.forEach(carrier => {
+    if(!carrier.enhancement) return;
+    const e = ENHANCEMENT_EFFECTS[carrier.enhancement.name];
+    if(!e) return;
+    const self = carrier.id === member.id;
+    const mods = e.mods.filter(m => self || m.target === 'unit');
+    if(mods.length) out.push({ mods, note: '★ ' + carrier.enhancement.name + (self ? '' : ' (from ' + carrier.unitName + ')') + ': ' + e.note });
+  });
+  return out;
+}
+function applyDelta(raw, mods){
+  const m = String(raw).match(/^(-?\d+)(.*)$/);   // leading integer + suffix (e.g. 24")
+  if(!m) return { value: raw, changed:false };
+  const d = mods.reduce((s, x) => s + x.delta, 0);
+  if(d === 0) return { value: raw, changed:false };
+  return { value: (parseInt(m[1], 10) + d) + m[2], changed:true };
+}
+// Which weapons a weapon-scope mod applies to (melee vs ranged).
+function wtypeMatches(mod, melee){
+  if(!mod.wtype || mod.wtype === 'all') return true;
+  return mod.wtype === (melee ? 'melee' : 'ranged');
+}
+function statGridMod(stats, effects){
+  const order = ['M','T','SV','W','LD','OC'];
+  const byStat = {};
+  effects.forEach(ef => ef.mods.forEach(m => { if(m.scope === 'model'){ (byStat[m.stat] = byStat[m.stat] || []).push(m); } }));
+  const cells = order.filter(k => stats && stats[k]).map(k => {
+    let val = stats[k], cls = '';
+    if(byStat[k]){ const r = applyDelta(stats[k], byStat[k]); val = r.value; cls = r.changed ? ' ds-mod' : ''; }
+    return '<div class="stat-cell"><div class="stat-label">'+k+'</div><div class="stat-value'+cls+'">'+val+'</div></div>';
+  }).join('');
+  return '<div class="stat-grid">'+cells+'</div>';
+}
+function weaponTableMod(title, weapons, melee, effects){
+  if(!weapons || weapons.length === 0) return '';
+  const skillCol = melee ? 'WS' : 'BS';
+  const wMods = {};
+  effects.forEach(ef => ef.mods.forEach(m => {
+    if(m.scope === 'weapon' && wtypeMatches(m, melee)){ (wMods[m.stat] = wMods[m.stat] || []).push(m); }
+  }));
+  const cell = (w, key) => {
+    const raw = (w[key] !== undefined && w[key] !== null && w[key] !== '') ? w[key] : '-';
+    if(wMods[key]){ const r = applyDelta(raw, wMods[key]); return '<span class="'+(r.changed ? 'ds-mod' : '')+'">'+r.value+'</span>'; }
+    return raw;
+  };
+  const rows = weapons.map(w => '<tr>'+
+    '<td>'+w.name+'</td>'+
+    '<td>'+cell(w,'Range')+'</td>'+
+    '<td>'+cell(w,'A')+'</td>'+
+    '<td>'+(w[skillCol]||'-')+'</td>'+
+    '<td>'+cell(w,'S')+'</td>'+
+    '<td>'+cell(w,'AP')+'</td>'+
+    '<td>'+cell(w,'D')+'</td>'+
+    '<td>'+((w.Keywords && w.Keywords !== '-') ? w.Keywords : '–')+'</td>'+
+  '</tr>').join('');
+  return '<div class="section-title">'+title+'</div><table class="weapon-table">'+
+    '<thead><tr><th>Weapon</th><th>Range</th><th>A</th><th>'+skillCol+'</th><th>S</th><th>AP</th><th>D</th><th>Keywords</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>';
+}
+function bundleFor(entry){
+  let host = entry;
+  if(entry.attachedTo){ const h = army.find(a => a.id === entry.attachedTo); if(h) host = h; }
+  return [host].concat(army.filter(a => a.attachedTo === host.id));
+}
+function memberDatasheetHTML(entry, highlightId, bundle){
+  const u = unitDefOf(entry);
+  if(!u || !u.datasheet) return '';
+  const ds = u.datasheet;
+  const detEffects = activeEffectsForUnit(u);
+  const enhEffects = enhancementEffectsFor(entry, bundle || [entry]);
+  const effects = detEffects.concat(enhEffects);
+  let html = '<div class="ds-member">';
+  html += '<div class="ds-member-name">'+(entry.id === highlightId ? '▸ ' : '')+entry.unitName+
+    (entry.attachedTo ? ' <span class="attached-tag">attached</span>' : '')+'</div>';
+  if(entry.enhancement && !ENHANCEMENT_EFFECTS[entry.enhancement.name]){
+    html += '<div class="ds-section-note">★ Enhancement: '+entry.enhancement.name+' (+'+entry.enhancement.cost+' pts)'+
+      (entry.enhancement.upgrade ? ' [Upgrade]' : '')+' — see your detachment rules for its effect.</div>';
+  }
+  html += statGridMod(ds.stats || {}, effects);
+  html += keywordChips(ds.keywords);
+  detEffects.forEach(ef => { html += '<div class="ds-section-note">⚙ '+ef.note+'</div>'; });
+  enhEffects.forEach(ef => { html += '<div class="ds-section-note">'+ef.note+'</div>'; });
+  html += abilitiesBlock(ds.abilities);
+  html += weaponTableMod('Ranged Weapons', ds.rangedWeapons, false, effects);
+  html += weaponTableMod('Melee Weapons', ds.meleeWeapons, true, effects);
+  html += '</div>';
+  return html;
+}
+function openDatasheet(entry){
+  const members = bundleFor(entry);
+  document.getElementById('modalCat').textContent = members.length > 1 ? 'Combined Unit · Datasheet' : 'Datasheet';
+  document.getElementById('modalName').textContent = entry.unitName;
+  let html = '';
+  const dets = selectedDets();
+  if(dets.length){
+    html += '<div class="ds-ctx">Active detachments: '+dets.map(d => d.name+' ('+d.disp+')').join(' · ')+
+      '. Stat changes from army-wide rules are shown in <span class="ds-mod">green</span>.</div>';
+  }
+  if(members.length > 1){
+    html += '<div class="ds-ctx">Fielded together: '+members.map(m => m.unitName).join(' + ')+
+      '. Attached Leaders/Support add their abilities to the unit.</div>';
+  }
+  members.forEach(m => { html += memberDatasheetHTML(m, entry.id, members); });
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalAdd').style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+/* ---- init ----------------------------------------------------------- */
+renderDetachments();
+
+document.getElementById('detAdd').addEventListener('change', e => { addDetachment(e.target.value); e.target.value = ''; });
+document.getElementById('searchInput').addEventListener('input', e => renderUnitList(e.target.value));
+document.getElementById('pointsLimit').addEventListener('input', () => { updateTotal(); renderDetachments(); saveCurrent(); });
+document.getElementById('clearBtn').addEventListener('click', () => {
+  army = []; curListName = 'Untitled';
+  renderArmy(); renderUnitList(document.getElementById('searchInput').value);
+});
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', e => { if(e.target.id === 'overlay') closeModal(); });
+
+document.getElementById('listsBtn').addEventListener('click', openListsModal);
+document.getElementById('listsClose').addEventListener('click', () => document.getElementById('listsOverlay').classList.add('hidden'));
+document.getElementById('listsSave').addEventListener('click', saveCurrentList);
+document.getElementById('listsOverlay').addEventListener('click', e => { if(e.target.id === 'listsOverlay') document.getElementById('listsOverlay').classList.add('hidden'); });
+
+document.getElementById('shareBtn').addEventListener('click', openShareModal);
+document.getElementById('shareClose').addEventListener('click', () => document.getElementById('shareOverlay').classList.add('hidden'));
+document.getElementById('importBtn').addEventListener('click', decodeAndImport);
+document.getElementById('copyCodeBtn').addEventListener('click', () => {
+  const t = document.getElementById('exportCode');
+  t.select();
+  try { document.execCommand('copy'); } catch(e){}
+  if(navigator.clipboard) navigator.clipboard.writeText(t.value);
+  document.getElementById('copyCodeBtn').textContent = 'Copied!';
+  setTimeout(() => { document.getElementById('copyCodeBtn').textContent = 'Copy code'; }, 1200);
+});
+document.getElementById('shareOverlay').addEventListener('click', e => { if(e.target.id === 'shareOverlay') document.getElementById('shareOverlay').classList.add('hidden'); });
+
+loadCurrent();
+renderUnitList(document.getElementById('searchInput').value);
 renderArmy();
 </script>
 </body>
