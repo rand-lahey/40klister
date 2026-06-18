@@ -954,13 +954,14 @@ function unitHasKeyword(unitDef, tok){
   return (unitDef.datasheet.keywords||[]).some(k => normTok(k) === normTok(tok));
 }
 function unitNameHas(unitDef, tok){ return normTok(unitDef.name).indexOf(normTok(tok)) !== -1; }
+var FACTION_WIDE_TOKENS = ['NECRONS', 'ANY'];   // tokens meaning "any unit in this faction"
 function matchToken(unitDef, tok){
   if(Array.isArray(tok)) return tok.every(t => unitHasKeyword(unitDef, t));   // compound: all keywords
-  if(String(tok).toUpperCase() === 'NECRONS') return true;                    // any unit in this faction
+  if(FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return true;
   return unitHasKeyword(unitDef, tok) || unitNameHas(unitDef, tok);
 }
 function matchTokenByName(unitDef, tok){
-  if(Array.isArray(tok) || String(tok).toUpperCase() === 'NECRONS') return false;
+  if(Array.isArray(tok) || FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return false;
   return unitNameHas(unitDef, tok);
 }
 // True Epic Hero = has the "Epic Hero" keyword (the datasheet's epicHero flag also marks

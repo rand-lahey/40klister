@@ -900,12 +900,20 @@ const DETACHMENTS = [
    {
     "name": "Negation Emitters",
     "cost": 15,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Stealth Battlesuits"
+    ]
    },
    {
     "name": "Unmasking Suite",
     "cost": 15,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Ghostkeel Battlesuit",
+     "Pathfinder Team",
+     "Stealth Battlesuits"
+    ]
    }
   ]
  },
@@ -917,11 +925,17 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "Admired Leader",
-    "cost": 20
+    "cost": 20,
+    "elig": [
+     "ANY"
+    ]
    },
    {
     "name": "Student of Kauyon",
-    "cost": 20
+    "cost": 20,
+    "elig": [
+     "Shaper"
+    ]
    }
   ]
  },
@@ -933,15 +947,24 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "Plasma Accelerator Rifle",
-    "cost": 20
+    "cost": 20,
+    "elig": [
+     "Battlesuit"
+    ]
    },
    {
     "name": "Supernova Launcher",
-    "cost": 15
+    "cost": 15,
+    "elig": [
+     "Battlesuit"
+    ]
    },
    {
     "name": "Thermoneutronic Projector",
-    "cost": 15
+    "cost": 15,
+    "elig": [
+     "Battlesuit"
+    ]
    }
   ]
  },
@@ -965,7 +988,10 @@ const DETACHMENTS = [
    },
    {
     "name": "Through Unity, Devastation",
-    "cost": 30
+    "cost": 30,
+    "elig": [
+     "ANY"
+    ]
    }
   ]
  },
@@ -1001,7 +1027,10 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "Coordinated Exploitation",
-    "cost": 30
+    "cost": 30,
+    "elig": [
+     "ANY"
+    ]
    },
    {
     "name": "Exemplar of the Mont'ka",
@@ -1013,7 +1042,10 @@ const DETACHMENTS = [
    },
    {
     "name": "Strike Swiftly",
-    "cost": 35
+    "cost": 35,
+    "elig": [
+     "ANY"
+    ]
    }
   ]
  },
@@ -1033,7 +1065,10 @@ const DETACHMENTS = [
    },
    {
     "name": "Puretide Engram Neurochip",
-    "cost": 15
+    "cost": 15,
+    "elig": [
+     "Battlesuit"
+    ]
    },
    {
     "name": "Starflare Ignition System",
@@ -1060,13 +1095,14 @@ function unitHasKeyword(unitDef, tok){
   return (unitDef.datasheet.keywords||[]).some(k => normTok(k) === normTok(tok));
 }
 function unitNameHas(unitDef, tok){ return normTok(unitDef.name).indexOf(normTok(tok)) !== -1; }
+var FACTION_WIDE_TOKENS = ['NECRONS', 'ANY'];   // tokens meaning "any unit in this faction"
 function matchToken(unitDef, tok){
   if(Array.isArray(tok)) return tok.every(t => unitHasKeyword(unitDef, t));   // compound: all keywords
-  if(String(tok).toUpperCase() === 'NECRONS') return true;                    // any unit in this faction
+  if(FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return true;
   return unitHasKeyword(unitDef, tok) || unitNameHas(unitDef, tok);
 }
 function matchTokenByName(unitDef, tok){
-  if(Array.isArray(tok) || String(tok).toUpperCase() === 'NECRONS') return false;
+  if(Array.isArray(tok) || FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return false;
   return unitNameHas(unitDef, tok);
 }
 // True Epic Hero = has the "Epic Hero" keyword (the datasheet's epicHero flag also marks
