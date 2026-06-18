@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>T'au Empire Army Builder</title>
 <style>
   :root {
@@ -423,6 +424,27 @@
   .ds-member { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
   .ds-member:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
   .ds-member-name { font-size: 15px; color: var(--green); font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+  @media (max-width: 760px) {
+    header { padding: 14px 14px; gap: 10px; }
+    header h1 { font-size: 18px; letter-spacing: 1px; }
+    .points-box { width: 100%; justify-content: space-between; }
+    .toolbar { padding: 10px 12px; gap: 8px; }
+    .toolbar select { min-width: 0; flex: 1 1 100%; }
+    .toolbar .spacer { display: none; }
+    .det-list { width: 100%; }
+    .dp-readout { flex: 1 1 auto; text-align: center; }
+    main { flex-direction: column; padding: 12px; gap: 12px; align-items: stretch; }
+    .col { width: 100%; flex: none; min-width: 0; }
+    .scroll { max-height: 56vh; }
+    .modal { width: 96vw; max-width: 96vw; max-height: 90vh; }
+    .modal-body { padding: 12px 14px; overflow-x: auto; }
+    .weapon-table { font-size: 9px; }
+    .weapon-table th, .weapon-table td { padding: 3px 3px; }
+    .stat-grid { gap: 4px; }
+    .unit-row, .army-row { padding: 10px 8px; }
+    .remove-btn, .wargear-btn, .enh-btn { width: 30px; height: 30px; }
+    .attach-btn { padding: 4px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -1086,7 +1108,7 @@ function dpBudget(){ return (parseInt(document.getElementById('pointsLimit').val
 function enhLimit(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 4 : 2; }
 function enhPool(){
   const map = {};
-  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade, elig:e.elig}; }));
+  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade, elig:e.elig, nochar:!!e.nochar}; }));
   return Object.values(map);
 }
 // --- enhancement eligibility (which units may take which enhancement/upgrade) ---
@@ -1117,7 +1139,7 @@ function unitEligibleForEnh(entry, enh){
   if(enh.elig){
     const toks = enh.elig;
     if(enh.upgrade) return !isCharacter(entry) && toks.some(t => matchToken(u, t));   // upgrades: named non-Character units
-    if(!isCharacter(entry)) return false;                                             // enhancements: Characters only
+    if(!enh.nochar && !isCharacter(entry)) return false;                              // enhancements: Characters only (unless nochar)
     if(isEpicHero(entry)) return toks.some(t => matchTokenByName(u, t));              // Epic Heroes only if named explicitly
     return toks.some(t => matchToken(u, t));
   }

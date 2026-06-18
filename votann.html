@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Leagues of Votann Army Builder</title>
 <style>
   :root {
@@ -423,6 +424,27 @@
   .ds-member { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 14px; }
   .ds-member:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
   .ds-member-name { font-size: 15px; color: var(--green); font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px; }
+  @media (max-width: 760px) {
+    header { padding: 14px 14px; gap: 10px; }
+    header h1 { font-size: 18px; letter-spacing: 1px; }
+    .points-box { width: 100%; justify-content: space-between; }
+    .toolbar { padding: 10px 12px; gap: 8px; }
+    .toolbar select { min-width: 0; flex: 1 1 100%; }
+    .toolbar .spacer { display: none; }
+    .det-list { width: 100%; }
+    .dp-readout { flex: 1 1 auto; text-align: center; }
+    main { flex-direction: column; padding: 12px; gap: 12px; align-items: stretch; }
+    .col { width: 100%; flex: none; min-width: 0; }
+    .scroll { max-height: 56vh; }
+    .modal { width: 96vw; max-width: 96vw; max-height: 90vh; }
+    .modal-body { padding: 12px 14px; overflow-x: auto; }
+    .weapon-table { font-size: 9px; }
+    .weapon-table th, .weapon-table td { padding: 3px 3px; }
+    .stat-grid { gap: 4px; }
+    .unit-row, .army-row { padding: 10px 8px; }
+    .remove-btn, .wargear-btn, .enh-btn { width: 30px; height: 30px; }
+    .attach-btn { padding: 4px 8px; }
+  }
 </style>
 </head>
 <body>
@@ -900,12 +922,18 @@ const DETACHMENTS = [
    {
     "name": "Optimised Attack Lines",
     "cost": 15,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Sagitaur"
+    ]
    },
    {
     "name": "Saturation Rounds",
     "cost": 10,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Sagitaur"
+    ]
    }
   ]
  },
@@ -966,12 +994,18 @@ const DETACHMENTS = [
    {
     "name": "Pan-spectral Lockons",
     "cost": 10,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Pioneers"
+    ]
    },
    {
     "name": "Shroudwërke Talismans",
     "cost": 15,
-    "upgrade": true
+    "upgrade": true,
+    "elig": [
+     "Yaegirs"
+    ]
    }
   ]
  },
@@ -983,19 +1017,31 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "Bastion Shield",
-    "cost": 25
+    "cost": 25,
+    "elig": [
+     "ANY"
+    ]
    },
    {
     "name": "High Kâhl",
-    "cost": 30
+    "cost": 30,
+    "elig": [
+     "Kâhl"
+    ]
    },
    {
     "name": "Ironskein",
-    "cost": 10
+    "cost": 10,
+    "elig": [
+     "Kâhl"
+    ]
    },
    {
     "name": "Quake Multigenerator",
-    "cost": 15
+    "cost": 15,
+    "elig": [
+     "Kâhl"
+    ]
    }
   ]
  },
@@ -1031,11 +1077,17 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "High Kâhl",
-    "cost": 30
+    "cost": 30,
+    "elig": [
+     "Kâhl"
+    ]
    },
    {
     "name": "Ironskein",
-    "cost": 10
+    "cost": 10,
+    "elig": [
+     "Kâhl"
+    ]
    }
   ]
  },
@@ -1047,19 +1099,31 @@ const DETACHMENTS = [
   "enh": [
    {
     "name": "Asset Manipulator",
-    "cost": 25
+    "cost": 25,
+    "elig": [
+     "ANY"
+    ]
    },
    {
     "name": "Etacarn SB9 Targeting Implant",
-    "cost": 15
+    "cost": 15,
+    "elig": [
+     "ANY"
+    ]
    },
    {
     "name": "Mercenary Prospector",
-    "cost": 20
+    "cost": 20,
+    "elig": [
+     "Kâhl"
+    ]
    },
    {
     "name": "Metaphysical Brokerage",
-    "cost": 20
+    "cost": 20,
+    "elig": [
+     "Memnyr Strategist"
+    ]
    }
   ]
  },
@@ -1121,7 +1185,7 @@ function dpBudget(){ return (parseInt(document.getElementById('pointsLimit').val
 function enhLimit(){ return (parseInt(document.getElementById('pointsLimit').value) || 0) >= 2000 ? 4 : 2; }
 function enhPool(){
   const map = {};
-  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade, elig:e.elig}; }));
+  selectedDets().forEach(d => d.enh.forEach(e => { if(!map[e.name]) map[e.name] = {name:e.name, cost:e.cost, upgrade:!!e.upgrade, elig:e.elig, nochar:!!e.nochar}; }));
   return Object.values(map);
 }
 // --- enhancement eligibility (which units may take which enhancement/upgrade) ---
@@ -1130,13 +1194,14 @@ function unitHasKeyword(unitDef, tok){
   return (unitDef.datasheet.keywords||[]).some(k => normTok(k) === normTok(tok));
 }
 function unitNameHas(unitDef, tok){ return normTok(unitDef.name).indexOf(normTok(tok)) !== -1; }
+var FACTION_WIDE_TOKENS = ['NECRONS', 'ANY'];   // tokens meaning "any unit in this faction"
 function matchToken(unitDef, tok){
   if(Array.isArray(tok)) return tok.every(t => unitHasKeyword(unitDef, t));   // compound: all keywords
-  if(String(tok).toUpperCase() === 'NECRONS') return true;                    // any unit in this faction
+  if(FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return true;
   return unitHasKeyword(unitDef, tok) || unitNameHas(unitDef, tok);
 }
 function matchTokenByName(unitDef, tok){
-  if(Array.isArray(tok) || String(tok).toUpperCase() === 'NECRONS') return false;
+  if(Array.isArray(tok) || FACTION_WIDE_TOKENS.indexOf(String(tok).toUpperCase()) !== -1) return false;
   return unitNameHas(unitDef, tok);
 }
 // True Epic Hero = has the "Epic Hero" keyword (the datasheet's epicHero flag also marks
@@ -1151,7 +1216,7 @@ function unitEligibleForEnh(entry, enh){
   if(enh.elig){
     const toks = enh.elig;
     if(enh.upgrade) return !isCharacter(entry) && toks.some(t => matchToken(u, t));   // upgrades: named non-Character units
-    if(!isCharacter(entry)) return false;                                             // enhancements: Characters only
+    if(!enh.nochar && !isCharacter(entry)) return false;                              // enhancements: Characters only (unless nochar)
     if(isEpicHero(entry)) return toks.some(t => matchTokenByName(u, t));              // Epic Heroes only if named explicitly
     return toks.some(t => matchToken(u, t));
   }
