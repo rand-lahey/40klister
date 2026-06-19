@@ -1634,22 +1634,38 @@ function recomputePoints(entry){
   const wg = (entry.wargear || []).reduce((s, w) => s + w.qty * w.cost, 0);
   entry.points = entry.basePoints + wg;
 }
+// Normalize a loadout def to a list of slots. Two slot types:
+//  - "alloc": per-model allocator (N models each pick a weapon; options may be capped).
+//  - "choice": single pick-one dropdown (for single-model characters).
+function loadoutSlots(def){
+  if(def.slots) return def.slots.map(s => Object.assign({ type: 'alloc' }, s));
+  return [{ type: 'alloc', label: def.label, default: def.default, options: def.options }];
+}
 function loadoutSummary(a){
   const def = getLoadoutDef(a); if(!def) return '';
-  const models = loadoutModels(a), lo = a.loadout || {};
-  let parts = [], sum = 0;
-  def.options.forEach(o => { const q = lo[o.name] || 0; if(q > 0){ parts.push(q + '× ' + o.name); sum += q; } });
-  const dflt = models - sum;
-  if(dflt > 0) parts.unshift(dflt + '× ' + def.default);
-  return parts.length ? '<div class="cat-badge">⚔ ' + parts.join(', ') + '</div>' : '';
+  const slots = loadoutSlots(def), models = loadoutModels(a), lo = a.loadout || {};
+  const lines = [];
+  slots.forEach((slot, i) => {
+    if(slot.type === 'choice'){
+      const v = lo[i] || slot.default; if(v) lines.push(v);
+    } else {
+      const sl = lo[i] || {}; let parts = [], sum = 0;
+      (slot.options || []).forEach(o => { const q = sl[o.name] || 0; if(q > 0){ parts.push(q + '× ' + o.name); sum += q; } });
+      const d = models - sum; if(d > 0) parts.unshift(d + '× ' + slot.default);
+      if(parts.length) lines.push(parts.join(', '));
+    }
+  });
+  return lines.length ? '<div class="cat-badge">⚔ ' + lines.join('  |  ') + '</div>' : '';
 }
 function openLoadoutModal(entry){
   const def = getLoadoutDef(entry); if(!def) return;
   const unit = unitDefOf(entry);
+  const slots = loadoutSlots(def);
   document.getElementById('modalCat').textContent = 'Weapon Loadout';
   document.getElementById('modalName').textContent = entry.unitName;
   const body = document.getElementById('modalBody'); body.innerHTML = '';
-  if(unit && unit.sizes && unit.sizes.length > 1){
+  const hasAlloc = slots.some(s => s.type !== 'choice');
+  if(hasAlloc && unit && unit.sizes && unit.sizes.length > 1){
     const f = document.createElement('div'); f.className = 'modal-field';
     f.innerHTML = '<label>Unit size</label>';
     const sel = document.createElement('select');
@@ -1663,43 +1679,61 @@ function openLoadoutModal(entry){
     f.appendChild(sel); body.appendChild(f);
   }
   const models = loadoutModels(entry);
-  const note = document.createElement('div'); note.className = 'modal-note';
-  note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + def.default + '. Capped options show their limit.';
-  body.appendChild(note);
-  const inputs = []; const lo = entry.loadout || {};
-  def.options.forEach(opt => {
-    const cap = capFor(opt, models);
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;';
-    const label = document.createElement('span');
-    label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '');
-    const inp = document.createElement('input');
-    inp.type = 'number'; inp.min = '0'; inp.style.width = '64px';
-    inp.max = (cap === Infinity ? String(models) : String(cap));
-    inp.value = Math.min(lo[opt.name] || 0, cap === Infinity ? (lo[opt.name] || 0) : cap);
-    row.appendChild(label); row.appendChild(inp); body.appendChild(row);
-    inputs.push({ opt, inp, cap });
+  const lo = entry.loadout || {};
+  const getters = [];
+  slots.forEach((slot, i) => {
+    if(slots.length > 1 || slot.type === 'choice'){
+      const h = document.createElement('div'); h.className = 'section-title';
+      h.textContent = slot.label || (slot.type === 'choice' ? 'Weapon' : 'Per-model weapons');
+      body.appendChild(h);
+    }
+    if(slot.type === 'choice'){
+      const sel = document.createElement('select'); sel.className = 'text-input';
+      [slot.default].concat(slot.options || []).forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o; sel.appendChild(op); });
+      sel.value = lo[i] || slot.default;
+      body.appendChild(sel);
+      getters.push(() => [i, sel.value]);
+    } else {
+      const note = document.createElement('div'); note.className = 'modal-note';
+      note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + slot.default + '. Capped options show their limit.';
+      body.appendChild(note);
+      const inputs = []; const sl = lo[i] || {};
+      (slot.options || []).forEach(opt => {
+        const cap = capFor(opt, models);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;';
+        const label = document.createElement('span');
+        label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '');
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = '0'; inp.style.width = '64px';
+        inp.max = (cap === Infinity ? String(models) : String(cap));
+        inp.value = Math.min(sl[opt.name] || 0, cap === Infinity ? (sl[opt.name] || 0) : cap);
+        row.appendChild(label); row.appendChild(inp); body.appendChild(row);
+        inputs.push({ opt, inp, cap });
+      });
+      const remaining = document.createElement('div'); remaining.className = 'modal-note'; body.appendChild(remaining);
+      function update(){
+        let sum = 0;
+        inputs.forEach(({ inp, cap }) => {
+          let v = Math.max(0, parseInt(inp.value) || 0);
+          if(cap !== Infinity) v = Math.min(v, cap);
+          const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
+          v = Math.min(v, models - others);
+          if(v < 0) v = 0;
+          inp.value = v; sum += v;
+        });
+        remaining.textContent = slot.default + ': ' + (models - sum) + '   (' + sum + ' of ' + models + ' models reassigned)';
+      }
+      inputs.forEach(({ inp }) => inp.addEventListener('input', update));
+      update();
+      getters.push(() => { const o = {}; inputs.forEach(({ opt, inp }) => { const v = Math.max(0, parseInt(inp.value) || 0); if(v > 0) o[opt.name] = v; }); return [i, o]; });
+    }
   });
-  const remaining = document.createElement('div'); remaining.className = 'modal-note'; body.appendChild(remaining);
-  function update(){
-    let sum = 0;
-    inputs.forEach(({ inp, cap }) => {
-      let v = Math.max(0, parseInt(inp.value) || 0);
-      if(cap !== Infinity) v = Math.min(v, cap);                    // hard cap
-      const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
-      v = Math.min(v, models - others);                            // can't exceed model count
-      if(v < 0) v = 0;
-      inp.value = v; sum += v;
-    });
-    remaining.textContent = def.default + ': ' + (models - sum) + '   (' + sum + ' of ' + models + ' models reassigned)';
-  }
-  inputs.forEach(({ inp }) => inp.addEventListener('input', update));
-  update();
   const add = document.getElementById('modalAdd');
   add.textContent = 'Save Loadout'; add.style.display = '';
   add.onclick = () => {
     const out = {};
-    inputs.forEach(({ opt, inp }) => { const v = Math.max(0, parseInt(inp.value) || 0); if(v > 0) out[opt.name] = v; });
+    getters.forEach(g => { const [i, v] = g(); out[i] = v; });
     entry.loadout = out; closeModal(); renderArmy();
   };
   document.getElementById('overlay').classList.remove('hidden');
