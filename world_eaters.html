@@ -910,7 +910,7 @@ let curListName = 'Untitled';
 const UNIT_RESTRICTIONS = {"Bloodthirster": "Khorne Daemonkin", "Skarbrand": "Khorne Daemonkin", "Bloodletters": "Khorne Daemonkin", "Bloodcrushers": "Khorne Daemonkin", "Flesh Hounds": "Khorne Daemonkin"};
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
-const LOADOUTS = {};
+const LOADOUTS = {"Chaos Terminators": {"slots": [{"type": "choice", "label": "Melee weapon", "default": "Accursed weapon", "options": ["Power fist", "Chainfist", "Paired accursed weapons"]}]}, "Jakhals": {"slots": [{"type": "choice", "label": "Dishonoured weapon", "default": "Paired manglers", "options": ["Skullsmasher and mangler"]}]}, "Forgefiend": {"slots": [{"type": "choice", "label": "Head weapon", "default": "Forgefiend jaws", "options": ["Forgefiend claws"]}]}, "Maulerfiend": {"slots": [{"type": "choice", "label": "Head weapon", "default": "Lasher tendrils", "options": ["Magma cutter"]}]}, "Helbrute": {"slots": [{"type": "choice", "label": "Ranged weapon", "default": "Multi-melta", "options": ["Twin autocannon", "Plasma cannon"]}, {"type": "choice", "label": "Arm weapon", "default": "Missile launcher", "options": ["Helbrute hammer", "Power scourge"]}]}, "Khorne Lord Of Skulls": {"slots": [{"type": "choice", "label": "Gatling weapon", "default": "Hades gatling cannon", "options": ["Skullhurler"]}, {"type": "choice", "label": "Cannon", "default": "Gorestorm cannon", "options": ["Daemongore cannon", "Ichor cannon"]}]}, "Bloodthirster": {"slots": [{"type": "choice", "label": "Weapon", "default": "Great axe of Khorne", "options": ["Bloodflail", "Lash of Khorne"]}]}};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1305,7 +1305,7 @@ function recomputePoints(entry){
 //  - "choice": single pick-one dropdown (for single-model characters).
 function loadoutSlots(def){
   if(def.slots) return def.slots.map(s => Object.assign({ type: 'alloc' }, s));
-  return [{ type: 'alloc', label: def.label, default: def.default, options: def.options }];
+  return [{ type: 'alloc', label: def.label, default: def.default, options: def.options, maxTotal: def.maxTotal }];
 }
 function loadoutSummary(a){
   const def = getLoadoutDef(a); if(!def) return '';
@@ -1364,6 +1364,7 @@ function openLoadoutModal(entry){
       note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + slot.default + '. Capped options show their limit.';
       body.appendChild(note);
       const inputs = []; const sl = lo[i] || {};
+      const totalCap = slot.maxTotal ? capFor({ cap: slot.maxTotal }, models) : Infinity;   // sum of options limit
       (slot.options || []).forEach(opt => {
         const cap = capFor(opt, models);
         const row = document.createElement('div');
@@ -1385,10 +1386,12 @@ function openLoadoutModal(entry){
           if(cap !== Infinity) v = Math.min(v, cap);
           const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
           v = Math.min(v, models - others);
+          if(totalCap !== Infinity) v = Math.min(v, totalCap - others);   // total options ≤ maxTotal
           if(v < 0) v = 0;
           inp.value = v; sum += v;
         });
-        remaining.textContent = slot.default + ': ' + (models - sum) + '   (' + sum + ' of ' + models + ' models reassigned)';
+        remaining.textContent = slot.default + ': ' + (models - sum) +
+          (totalCap !== Infinity ? ('   (max ' + totalCap + ' upgrade' + (totalCap === 1 ? '' : 's') + ' total)') : ('   (' + sum + ' of ' + models + ' reassigned)'));
       }
       inputs.forEach(({ inp }) => inp.addEventListener('input', update));
       update();

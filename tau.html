@@ -910,7 +910,7 @@ let curListName = 'Untitled';
 const UNIT_RESTRICTIONS = {};
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
-const LOADOUTS = {};
+const LOADOUTS = {"Kroot Carnivores": {"slots": [{"type": "choice", "label": "Weapon", "default": "Kroot rifle", "options": ["Kroot carbine"]}]}, "Kroot Farstalkers": {"slots": [{"type": "choice", "label": "Weapon", "default": "Farstalker firearm", "options": ["T'au tech rifle"]}]}, "Stealth Battlesuits": {"slots": [{"type": "choice", "label": "Special weapon", "default": "Burst cannon", "options": ["Fusion blaster"]}]}, "Piranhas": {"slots": [{"type": "choice", "label": "Weapon", "default": "Piranha burst cannon", "options": ["Piranha fusion blaster"]}]}, "Broadside Battlesuits": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Heavy rail rifle", "options": ["High-yield missile pods"]}]}, "Riptide Battlesuit": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Heavy burst cannon", "options": ["Ion accelerator"]}]}, "Hammerhead Gunship": {"slots": [{"type": "choice", "label": "Turret weapon", "default": "Railgun", "options": ["Ion cannon"]}]}, "Ghostkeel Battlesuit": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Fusion collider", "options": ["Cyclic ion raker"]}]}, "Stormsurge": {"slots": [{"type": "choice", "label": "Main cannon", "default": "Pulse Driver Cannon", "options": ["Pulse blast cannon"]}]}};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1300,7 +1300,7 @@ function recomputePoints(entry){
 //  - "choice": single pick-one dropdown (for single-model characters).
 function loadoutSlots(def){
   if(def.slots) return def.slots.map(s => Object.assign({ type: 'alloc' }, s));
-  return [{ type: 'alloc', label: def.label, default: def.default, options: def.options }];
+  return [{ type: 'alloc', label: def.label, default: def.default, options: def.options, maxTotal: def.maxTotal }];
 }
 function loadoutSummary(a){
   const def = getLoadoutDef(a); if(!def) return '';
@@ -1359,6 +1359,7 @@ function openLoadoutModal(entry){
       note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + slot.default + '. Capped options show their limit.';
       body.appendChild(note);
       const inputs = []; const sl = lo[i] || {};
+      const totalCap = slot.maxTotal ? capFor({ cap: slot.maxTotal }, models) : Infinity;   // sum of options limit
       (slot.options || []).forEach(opt => {
         const cap = capFor(opt, models);
         const row = document.createElement('div');
@@ -1380,10 +1381,12 @@ function openLoadoutModal(entry){
           if(cap !== Infinity) v = Math.min(v, cap);
           const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
           v = Math.min(v, models - others);
+          if(totalCap !== Infinity) v = Math.min(v, totalCap - others);   // total options ≤ maxTotal
           if(v < 0) v = 0;
           inp.value = v; sum += v;
         });
-        remaining.textContent = slot.default + ': ' + (models - sum) + '   (' + sum + ' of ' + models + ' models reassigned)';
+        remaining.textContent = slot.default + ': ' + (models - sum) +
+          (totalCap !== Infinity ? ('   (max ' + totalCap + ' upgrade' + (totalCap === 1 ? '' : 's') + ' total)') : ('   (' + sum + ' of ' + models + ' reassigned)'));
       }
       inputs.forEach(({ inp }) => inp.addEventListener('input', update));
       update();
