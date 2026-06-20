@@ -1241,14 +1241,27 @@ function eligibleBodyguards(leader){
 
 /* ---- available units (with detachment-gated availability) ---------- */
 function unitRequiredDetachment(name){ return UNIT_RESTRICTIONS[name] || null; }
+// Selection list is grouped by keyword in this fixed order; Epic Hero / Character win over other keywords.
+const UNIT_GROUP_ORDER = ['Epic Hero', 'Character', 'Battle Line', 'Infantry', 'Swarm', 'Mounted', 'Beast', 'Monster', 'Vehicle', 'Dedicated Transport', 'Other'];
+function unitGroupOf(u){
+  const kw = ((u.datasheet && u.datasheet.keywords) || []).map(k => k.toLowerCase());
+  if(kw.indexOf('epic hero') !== -1) return 'Epic Hero';
+  if(kw.indexOf('character') !== -1) return 'Character';
+  // precedence: Dedicated Transport before Vehicle (a transport is also a Vehicle); display order is separate.
+  const pairs = [['battleline', 'Battle Line'], ['infantry', 'Infantry'], ['swarm', 'Swarm'], ['mounted', 'Mounted'],
+                 ['beast', 'Beast'], ['monster', 'Monster'], ['dedicated transport', 'Dedicated Transport'], ['vehicle', 'Vehicle']];
+  for(let i = 0; i < pairs.length; i++){ if(kw.indexOf(pairs[i][0]) !== -1) return pairs[i][1]; }
+  return 'Other';
+}
 function renderUnitList(filterText){
   const container = document.getElementById('unitList');
   container.innerHTML = '';
   const filtered = filterText
     ? UNITS.filter(u => u.name.toLowerCase().includes(filterText.toLowerCase()))
     : UNITS;
-  const groups = groupByCategory(filtered);
-  CATEGORY_ORDER.forEach(cat => {
+  const groups = {};
+  filtered.forEach(u => { const gp = unitGroupOf(u); (groups[gp] = groups[gp] || []).push(u); });
+  UNIT_GROUP_ORDER.forEach(cat => {
     if(!groups[cat] || groups[cat].length === 0) return;
     const catDiv = document.createElement('div');
     catDiv.className = 'category';
@@ -1307,13 +1320,47 @@ function loadoutSlots(def){
   if(def.slots) return def.slots.map(s => Object.assign({ type: 'alloc' }, s));
   return [{ type: 'alloc', label: def.label, default: def.default, options: def.options, maxTotal: def.maxTotal }];
 }
+// A choice option is a weapon-name string, or {name, weapons:[...], abilities:[...]} (grants extra gear).
+function optName(o){ return typeof o === 'string' ? o : o.name; }
+function optGrants(o){
+  if(typeof o === 'string') return { name: o, weapons: [o], abilities: [] };
+  return { name: o.name, weapons: o.weapons || [o.name], abilities: o.abilities || [] };
+}
+// Base weapon name for matching: drop the leading ➤ (graphics) and the " - profile" suffix
+// so a loadout grant of "Heat ray" matches "➤ Heat ray - dispersed" / "➤ Heat ray - focused".
+function weaponBase(name){
+  let n = String(name);
+  if(/^➤/.test(n)) n = n.replace(/^➤\s*/, '').replace(/\s+-\s+[^-]+$/, '');
+  return n.trim();
+}
+// What the current loadout shows vs. all options (so the datasheet can hide unchosen weapons/abilities).
+function loadoutGrants(entry){
+  const controlledW = new Set(), controlledA = new Set(), chosenW = new Set(), chosenA = new Set();
+  const def = getLoadoutDef(entry);
+  if(!def) return { controlledW, controlledA, chosenW, chosenA };
+  const slots = loadoutSlots(def), lo = entry.loadout || {};
+  slots.forEach((slot, i) => {
+    const all = [slot.default].concat(slot.options || []).map(optGrants);
+    all.forEach(g => { g.weapons.forEach(w => controlledW.add(weaponBase(w))); g.abilities.forEach(a => controlledA.add(a)); });
+    if(slot.type === 'choice'){
+      const cv = lo[i] || optName(slot.default);
+      const chosen = all.find(g => g.name === cv) || optGrants(slot.default);
+      chosen.weapons.forEach(w => chosenW.add(weaponBase(w))); chosen.abilities.forEach(a => chosenA.add(a));
+    } else {
+      const sl = lo[i] || {};
+      const dg = optGrants(slot.default); dg.weapons.forEach(w => chosenW.add(weaponBase(w))); dg.abilities.forEach(a => chosenA.add(a));
+      (slot.options || []).forEach(opt => { const g = optGrants(opt); if((sl[g.name] || 0) > 0){ g.weapons.forEach(w => chosenW.add(weaponBase(w))); g.abilities.forEach(a => chosenA.add(a)); } });
+    }
+  });
+  return { controlledW, controlledA, chosenW, chosenA };
+}
 function loadoutSummary(a){
   const def = getLoadoutDef(a); if(!def) return '';
   const slots = loadoutSlots(def), models = loadoutModels(a), lo = a.loadout || {};
   const lines = [];
   slots.forEach((slot, i) => {
     if(slot.type === 'choice'){
-      const v = lo[i] || slot.default; if(v) lines.push(v);
+      const v = lo[i] || optName(slot.default); if(v) lines.push(v);
     } else {
       const sl = lo[i] || {}; let parts = [], sum = 0;
       (slot.options || []).forEach(o => { const q = sl[o.name] || 0; if(q > 0){ parts.push(q + '× ' + o.name); sum += q; } });
@@ -1322,6 +1369,64 @@ function loadoutSummary(a){
     }
   });
   return lines.length ? '<div class="cat-badge">⚔ ' + lines.join('  |  ') + '</div>' : '';
+}
+// Render loadout controls into `body`; returns getLoadout() -> loadout object. Reused by the
+// ⚔ modal and the add-unit modal.
+function buildLoadoutUI(body, def, models, lo){
+  const slots = loadoutSlots(def);
+  const getters = [];
+  slots.forEach((slot, i) => {
+    if(slots.length > 1 || slot.type === 'choice'){
+      const h = document.createElement('div'); h.className = 'section-title';
+      h.textContent = slot.label || (slot.type === 'choice' ? 'Weapon' : 'Per-model weapons');
+      body.appendChild(h);
+    }
+    if(slot.type === 'choice'){
+      const sel = document.createElement('select'); sel.className = 'text-input';
+      [slot.default].concat(slot.options || []).forEach(o => { const nm = optName(o); const op = document.createElement('option'); op.value = nm; op.textContent = nm; sel.appendChild(op); });
+      sel.value = lo[i] || optName(slot.default);
+      body.appendChild(sel);
+      getters.push(() => [i, sel.value]);
+    } else {
+      const note = document.createElement('div'); note.className = 'modal-note';
+      note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + slot.default + '. Capped options show their limit.';
+      body.appendChild(note);
+      const inputs = []; const sl = lo[i] || {};
+      const totalCap = slot.maxTotal ? capFor({ cap: slot.maxTotal }, models) : Infinity;
+      (slot.options || []).forEach(opt => {
+        const cap = capFor(opt, models);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;';
+        const label = document.createElement('span');
+        label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '');
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = '0'; inp.style.width = '64px';
+        inp.max = (cap === Infinity ? String(models) : String(cap));
+        inp.value = Math.min(sl[opt.name] || 0, cap === Infinity ? (sl[opt.name] || 0) : cap);
+        row.appendChild(label); row.appendChild(inp); body.appendChild(row);
+        inputs.push({ opt, inp, cap });
+      });
+      const remaining = document.createElement('div'); remaining.className = 'modal-note'; body.appendChild(remaining);
+      function update(){
+        let sum = 0;
+        inputs.forEach(({ inp, cap }) => {
+          let v = Math.max(0, parseInt(inp.value) || 0);
+          if(cap !== Infinity) v = Math.min(v, cap);
+          const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
+          v = Math.min(v, models - others);
+          if(totalCap !== Infinity) v = Math.min(v, totalCap - others);
+          if(v < 0) v = 0;
+          inp.value = v; sum += v;
+        });
+        remaining.textContent = slot.default + ': ' + (models - sum) +
+          (totalCap !== Infinity ? ('   (max ' + totalCap + ' upgrade' + (totalCap === 1 ? '' : 's') + ' total)') : ('   (' + sum + ' of ' + models + ' reassigned)'));
+      }
+      inputs.forEach(({ inp }) => inp.addEventListener('input', update));
+      update();
+      getters.push(() => { const o = {}; inputs.forEach(({ opt, inp }) => { const v = Math.max(0, parseInt(inp.value) || 0); if(v > 0) o[opt.name] = v; }); return [i, o]; });
+    }
+  });
+  return () => { const out = {}; getters.forEach(gt => { const [i, v] = gt(); out[i] = v; }); return out; };
 }
 function openLoadoutModal(entry){
   const def = getLoadoutDef(entry); if(!def) return;
@@ -1344,66 +1449,75 @@ function openLoadoutModal(entry){
     };
     f.appendChild(sel); body.appendChild(f);
   }
-  const models = loadoutModels(entry);
-  const lo = entry.loadout || {};
-  const getters = [];
-  slots.forEach((slot, i) => {
-    if(slots.length > 1 || slot.type === 'choice'){
-      const h = document.createElement('div'); h.className = 'section-title';
-      h.textContent = slot.label || (slot.type === 'choice' ? 'Weapon' : 'Per-model weapons');
-      body.appendChild(h);
-    }
-    if(slot.type === 'choice'){
-      const sel = document.createElement('select'); sel.className = 'text-input';
-      [slot.default].concat(slot.options || []).forEach(o => { const op = document.createElement('option'); op.value = o; op.textContent = o; sel.appendChild(op); });
-      sel.value = lo[i] || slot.default;
-      body.appendChild(sel);
-      getters.push(() => [i, sel.value]);
-    } else {
-      const note = document.createElement('div'); note.className = 'modal-note';
-      note.textContent = 'Each of the ' + models + ' models carries one weapon. Default: ' + slot.default + '. Capped options show their limit.';
-      body.appendChild(note);
-      const inputs = []; const sl = lo[i] || {};
-      const totalCap = slot.maxTotal ? capFor({ cap: slot.maxTotal }, models) : Infinity;   // sum of options limit
-      (slot.options || []).forEach(opt => {
-        const cap = capFor(opt, models);
-        const row = document.createElement('div');
-        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;';
-        const label = document.createElement('span');
-        label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '');
-        const inp = document.createElement('input');
-        inp.type = 'number'; inp.min = '0'; inp.style.width = '64px';
-        inp.max = (cap === Infinity ? String(models) : String(cap));
-        inp.value = Math.min(sl[opt.name] || 0, cap === Infinity ? (sl[opt.name] || 0) : cap);
-        row.appendChild(label); row.appendChild(inp); body.appendChild(row);
-        inputs.push({ opt, inp, cap });
-      });
-      const remaining = document.createElement('div'); remaining.className = 'modal-note'; body.appendChild(remaining);
-      function update(){
-        let sum = 0;
-        inputs.forEach(({ inp, cap }) => {
-          let v = Math.max(0, parseInt(inp.value) || 0);
-          if(cap !== Infinity) v = Math.min(v, cap);
-          const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
-          v = Math.min(v, models - others);
-          if(totalCap !== Infinity) v = Math.min(v, totalCap - others);   // total options ≤ maxTotal
-          if(v < 0) v = 0;
-          inp.value = v; sum += v;
-        });
-        remaining.textContent = slot.default + ': ' + (models - sum) +
-          (totalCap !== Infinity ? ('   (max ' + totalCap + ' upgrade' + (totalCap === 1 ? '' : 's') + ' total)') : ('   (' + sum + ' of ' + models + ' reassigned)'));
-      }
-      inputs.forEach(({ inp }) => inp.addEventListener('input', update));
-      update();
-      getters.push(() => { const o = {}; inputs.forEach(({ opt, inp }) => { const v = Math.max(0, parseInt(inp.value) || 0); if(v > 0) o[opt.name] = v; }); return [i, o]; });
-    }
-  });
+  const getLoadout = buildLoadoutUI(body, def, loadoutModels(entry), entry.loadout || {});
   const add = document.getElementById('modalAdd');
   add.textContent = 'Save Loadout'; add.style.display = '';
+  add.onclick = () => { entry.loadout = getLoadout(); closeModal(); renderArmy(); };
+  document.getElementById('overlay').classList.remove('hidden');
+}
+// Override the add-unit modal so weapon loadout can be chosen before adding to the list.
+function openModal(unit){
+  activeUnit = unit;
+  document.getElementById('modalCat').textContent = unit.category + (unit.epicHero ? ' · Epic Hero (max 1)' : ' · max 3 per army');
+  document.getElementById('modalName').textContent = unit.name;
+  const body = document.getElementById('modalBody'); body.innerHTML = '';
+  const ds = unit.datasheet;
+  if(ds){
+    const dsWrap = document.createElement('div');
+    dsWrap.innerHTML = statGrid(ds.stats || {}) + keywordChips(ds.keywords) + abilitiesBlock(ds.abilities) +
+      weaponTable('Ranged Weapons', ds.rangedWeapons, false) + weaponTable('Melee Weapons', ds.meleeWeapons, true);
+    body.appendChild(dsWrap);
+  }
+  const have = countInArmy(unit.name);
+  const copyIndex = have;
+  let sizeSelect = null;
+  if(unit.sizes.length > 1){
+    const field = document.createElement('div'); field.className = 'modal-field';
+    field.innerHTML = '<label>Unit size</label>';
+    sizeSelect = document.createElement('select');
+    unit.sizes.forEach((s, i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = s.models + (s.models === '1' ? ' model' : ' models'); sizeSelect.appendChild(opt); });
+    field.appendChild(sizeSelect); body.appendChild(field);
+  }
+  const priceField = document.createElement('div'); priceField.className = 'modal-field';
+  priceField.innerHTML = '<label>Cost</label><div class="modal-price" id="modalPrice"></div><div class="modal-note" id="modalNote"></div>';
+  body.appendChild(priceField);
+  // loadout controls (re-rendered when size changes so caps scale)
+  const def = getLoadoutDef({ unitName: unit.name });
+  let getLoadout = null, loadoutHost = null;
+  if(def){
+    const h = document.createElement('div'); h.className = 'section-title'; h.textContent = 'Weapon loadout'; body.appendChild(h);
+    loadoutHost = document.createElement('div'); body.appendChild(loadoutHost);
+    const renderLo = () => {
+      loadoutHost.innerHTML = '';
+      const models = parseInt(unit.sizes[sizeSelect ? parseInt(sizeSelect.value) : 0].models, 10) || 1;
+      getLoadout = buildLoadoutUI(loadoutHost, def, models, {});
+    };
+    renderLo();
+    if(sizeSelect) sizeSelect.addEventListener('change', renderLo);
+  }
+  function updatePrice(){
+    const size = unit.sizes[sizeSelect ? parseInt(sizeSelect.value) : 0];
+    const price = priceFor(size, copyIndex);
+    document.getElementById('modalPrice').textContent = price + ' pts';
+    const note = document.getElementById('modalNote');
+    note.textContent = (size.flat === null || size.flat === undefined)
+      ? (copyIndex < 2 ? 'Price for the 1st or 2nd copy of this unit.' : 'Price increases for the 3rd copy.') : '';
+  }
+  if(sizeSelect) sizeSelect.addEventListener('change', updatePrice);
+  updatePrice();
+  const warn = document.createElement('div'); warn.className = 'modal-warn'; warn.id = 'modalWarn';
+  if(have > 0) warn.textContent = 'You already have ' + have + ' of this unit in your army.';
+  body.appendChild(warn);
+  const add = document.getElementById('modalAdd');
+  add.style.display = ''; add.textContent = 'Add to Army';
   add.onclick = () => {
-    const out = {};
-    getters.forEach(g => { const [i, v] = g(); out[i] = v; });
-    entry.loadout = out; closeModal(); renderArmy();
+    const size = unit.sizes[sizeSelect ? parseInt(sizeSelect.value) : 0];
+    const price = priceFor(size, copyIndex);
+    army.push({ id: nextId++, unitName: unit.name, category: unit.category, models: size.models,
+      basePoints: price, points: price, wargear: [], loadout: getLoadout ? getLoadout() : null });
+    closeModal();
+    renderUnitList(document.getElementById('searchInput').value);
+    renderArmy();
   };
   document.getElementById('overlay').classList.remove('hidden');
 }
@@ -1786,13 +1900,20 @@ function memberDatasheetHTML(entry, highlightId, bundle){
     html += '<div class="ds-section-note">★ Enhancement: '+entry.enhancement.name+' (+'+entry.enhancement.cost+' pts)'+
       (entry.enhancement.upgrade ? ' [Upgrade]' : '')+' — see your detachment rules for its effect.</div>';
   }
+  // Hide weapons/abilities controlled by the loadout that aren't currently selected.
+  const g = loadoutGrants(entry);
+  const showW = w => !g.controlledW.has(weaponBase(w.name)) || g.chosenW.has(weaponBase(w.name));
+  const showA = a => !g.controlledA.has(a.name) || g.chosenA.has(a.name);
+  const ranged = (ds.rangedWeapons || []).filter(showW);
+  const melee = (ds.meleeWeapons || []).filter(showW);
+  const abilities = (ds.abilities || []).filter(showA);
   html += statGridMod(ds.stats || {}, effects);
   html += keywordChips(ds.keywords);
   detEffects.forEach(ef => { html += '<div class="ds-section-note">⚙ '+ef.note+'</div>'; });
   enhEffects.forEach(ef => { html += '<div class="ds-section-note">'+ef.note+'</div>'; });
-  html += abilitiesBlock(ds.abilities);
-  html += weaponTableMod('Ranged Weapons', ds.rangedWeapons, false, effects);
-  html += weaponTableMod('Melee Weapons', ds.meleeWeapons, true, effects);
+  html += abilitiesBlock(abilities);
+  html += weaponTableMod('Ranged Weapons', ranged, false, effects);
+  html += weaponTableMod('Melee Weapons', melee, true, effects);
   html += '</div>';
   return html;
 }
