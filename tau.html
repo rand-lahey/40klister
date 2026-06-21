@@ -384,9 +384,13 @@
   .tb-btn {
     background: var(--panel2); border: 1px solid var(--border); color: var(--text);
     padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
   }
-  .tb-btn:hover { border-color: var(--green-dim); color: var(--green); }
+  .tb-btn:hover { border-color: var(--green-dim); color: var(--green); background: #1a2113; }
+  .tb-btn:active { transform: translateY(1px); background: #0f140b; }
   .tb-btn:disabled { cursor: default; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+  .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .enh-badge {
     display: inline-block; margin-top: 4px; font-size: 11px; color: #0b0f0a;
     background: var(--gold); padding: 1px 6px; border-radius: 3px;
@@ -455,10 +459,16 @@
     <a class="back-link" href="index.html" style="font-size:11px;color:#8aa074;text-decoration:none;">&larr; Choose a different faction</a>
     <div class="faction-tag">FACTION: T'AU EMPIRE</div>
   </div>
-  <div class="points-box">
-    <label>Points limit</label>
-    <input type="number" id="pointsLimit" value="2000" min="0" step="5">
-    <div class="points-total ok" id="totalDisplay">0 / 2000</div>
+  <div class="header-right">
+    <div class="header-actions">
+      <button class="tb-btn" id="listsBtn">Saved lists</button>
+      <button class="tb-btn" id="shareBtn">Share / Import</button>
+    </div>
+    <div class="points-box">
+      <label>Points limit</label>
+      <input type="number" id="pointsLimit" value="2000" min="0" step="5">
+      <div class="points-total ok" id="totalDisplay">0 / 2000</div>
+    </div>
   </div>
 </header>
 
@@ -469,8 +479,6 @@
   <span class="dp-readout" id="dpReadout">DP 0 / 3</span>
   <span class="spacer"></span>
   <span class="tb-label" id="listNameTag"></span>
-  <button class="tb-btn" id="listsBtn">Saved lists</button>
-  <button class="tb-btn" id="shareBtn">Share / Import</button>
 </div>
 <div class="det-warn" id="detWarn"></div>
 
@@ -2022,8 +2030,7 @@ renderArmy();
       btn = document.createElement('button');
       btn.id = 'authBtn';
       btn.className = 'tb-btn';
-      const shareBtn = document.getElementById('shareBtn');
-      shareBtn.parentNode.insertBefore(btn, shareBtn);
+      document.querySelector('.header-actions').appendChild(btn);
     }
     if(currentUser){
       const label = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
