@@ -911,6 +911,8 @@ const UNIT_RESTRICTIONS = {};
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
 const LOADOUTS = {"Necron Warriors": {"default": "Gauss flayer", "options": [{"name": "Gauss reaper"}]}, "Lokhust Heavy Destroyers": {"default": "Enmitic exterminator", "options": [{"name": "Gauss destructor"}]}, "Canoptek Macrocytes": {"default": "Gauss scalpel", "options": [{"name": "Atomiser beam"}, {"name": "Tesla caster"}]}, "Tomb Blades": {"default": "Twin gauss blaster", "options": [{"name": "Particle beamer"}, {"name": "Twin tesla carbine"}]}, "Immortals": {"slots": [{"type": "choice", "label": "Weapon", "default": "Gauss blaster", "options": ["Tesla carbine"]}]}, "Lychguard": {"slots": [{"type": "choice", "label": "Weapon", "default": {"name": "Warscythe", "weapons": ["Warscythe"]}, "options": [{"name": "Hyperphase sword and dispersion shield", "weapons": ["Hyperphase sword"], "abilities": ["Dispersion Shield"]}]}]}, "Triarch Praetorians": {"slots": [{"type": "choice", "label": "Weapon", "default": {"name": "Rods of covenant", "weapons": ["Rod of covenant"]}, "options": [{"name": "Voidblades and particle casters", "weapons": ["Voidblade", "Particle caster"]}]}]}, "Lokhust Lord": {"slots": [{"type": "choice", "label": "Weapon", "default": "Staff of light", "options": ["Lord's blade"]}]}, "Triarch Stalker": {"slots": [{"type": "choice", "label": "Main weapon", "default": "Heat ray", "options": ["Particle shredder", "Heavy gauss cannon array"]}]}, "Annihilation Barge": {"slots": [{"type": "choice", "label": "Secondary weapon", "default": "Gauss cannon", "options": ["Tesla cannon"]}]}, "Catacomb Command Barge": {"slots": [{"type": "choice", "label": "Main weapon", "default": "Gauss cannon", "options": ["Tesla cannon"]}]}};
+// Detachment rule descriptions. detachmentName -> text.
+const DETACHMENT_DESC = {"Annihilation Legion": "Annihilation Protocol: Destroyer Cult / Flayed Ones units re-roll Charge rolls (+1 to the roll if a target is Below Half-strength). Destroyer Cult ranged attacks vs the closest eligible target gain +1 Armour Penetration.", "Awakened Dynasty": "Command Protocols: While a Necrons Character model leads a unit, add 1 to that unit's Hit rolls.", "Canoptek Court": "Power Matrix: Areas of the battlefield form your Power Matrix — your deployment zone always, and No Man's Land while you control at least half the objectives there. Your units gain bonuses while within the Power Matrix.", "Cryptek Conclave": "Technosorcerous Augmentations: Cryptek ranged weapons have [ASSAULT]. Each Shooting phase, a Cryptek unit can give its ranged weapons one chosen ability: [ANTI-INFANTRY 3+], [ANTI-MOUNTED 4+], [ASSAULT], [HEAVY] or [IGNORES COVER].", "Cursed Legion": "Cold Fervour: Add 2 to the Strength of weapons equipped by Destroyer Cult models. The first time each turn a Destroyer Cult unit destroys or halves an enemy, your other Necron units (non-Monster/Titanic) also gain +2 Strength until end of turn.", "Hand of the Dynasty": "Hypermotility Protocols: Friendly Immortals / Necron Warriors ranged attacks have [ASSAULT], and those units can still shoot and declare a charge in a turn they Advanced.", "Hypercrypt Legion": "Hyperphasing: At the end of your opponent's turn, remove up to 1–3 Necrons units (by battle size) from the battlefield and set them back up anywhere via Hyperspace (Deep Strike), more than 9\" from enemies.", "Obeisance Phalanx": "Worthy Foes: In your Command phase, select one enemy unit. Until your next Command phase, your Noble, Lychguard and Triarch units add 1 to Wound rolls against that unit.", "Pantheon of Woe": "Necrons Monster units gain Distortion Fields (Aura): enemy units within 6\" are 'unravelling' and attacks targeting them get +1 Armour Penetration; your Monsters can take wounds to fuel their effects.", "Skyshroud Spearhead": "Transdimensional Deployment: Friendly Tomb Blades have Deep Strike, and shoot to better effect in a turn they arrive from Reserves (ingress).", "Starshatter Arsenal": "Add 1 to Hit rolls for Necrons attacks targeting a unit within range of an objective marker. Necrons Vehicle and Mounted (non-Titanic) ranged weapons gain [ASSAULT].", "The Phaeron's Armoury": "Empowered Engines: Friendly Necrons Titanic Fly units gain +6\" Move. (Has the HYPERCRYPT tag — cannot be combined with another Hypercrypt detachment.)"};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1050,12 +1052,14 @@ function renderDetachments(){
   selectedDets().forEach(d => {
     const chip = document.createElement('span');
     chip.className = 'det-chip';
+    chip.title = 'Click for detachment rule';
     chip.innerHTML = '<span>' + d.name + '</span>' +
       '<span class="dp">' + d.dp + 'DP</span>' +
       '<span class="disp">' + d.disp + '</span>' +
       (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
       '<span class="x" title="Remove">✕</span>';
-    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    chip.querySelector('.x').onclick = (e) => { e.stopPropagation(); removeDetachment(d.name); };
+    chip.onclick = (e) => { if(!e.target.classList.contains('x')) openDetachmentInfo(d.name); };
     list.appendChild(chip);
   });
   const sel = document.getElementById('detAdd');
@@ -1066,6 +1070,26 @@ function renderDetachments(){
   const ro = document.getElementById('dpReadout');
   ro.textContent = 'DP ' + used + ' / ' + budget;
   ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+function openDetachmentInfo(name){
+  const d = getDet(name); if(!d) return;
+  document.getElementById('modalCat').textContent = d.dp + ' DP · ' + d.disp + (d.unique ? ' · UNIQUE: ' + d.unique : '');
+  document.getElementById('modalName').textContent = d.name;
+  const body = document.getElementById('modalBody'); body.innerHTML = '';
+  const div = document.createElement('div');
+  div.style.cssText = 'white-space:pre-wrap;font-size:13px;line-height:1.5;color:var(--text);';
+  div.textContent = DETACHMENT_DESC[name] || 'Detachment rule description not available yet for this faction.';
+  body.appendChild(div);
+  if(d.enh && d.enh.length){
+    const h = document.createElement('div'); h.className = 'section-title'; h.textContent = 'Enhancements'; body.appendChild(h);
+    d.enh.forEach(e => {
+      const r = document.createElement('div'); r.className = 'modal-note';
+      r.textContent = e.name + ' — ' + e.cost + ' pts' + (e.upgrade ? '  [Upgrade]' : '');
+      body.appendChild(r);
+    });
+  }
+  const add = document.getElementById('modalAdd'); add.style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- unit / character helpers -------------------------------------- */

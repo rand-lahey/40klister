@@ -911,6 +911,8 @@ const UNIT_RESTRICTIONS = {};
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
 const LOADOUTS = {"Kroot Carnivores": {"slots": [{"type": "choice", "label": "Weapon", "default": "Kroot rifle", "options": ["Kroot carbine"]}]}, "Kroot Farstalkers": {"slots": [{"type": "choice", "label": "Weapon", "default": "Farstalker firearm", "options": ["T'au tech rifle"]}]}, "Stealth Battlesuits": {"slots": [{"type": "choice", "label": "Special weapon", "default": "Burst cannon", "options": ["Fusion blaster"]}]}, "Piranhas": {"slots": [{"type": "choice", "label": "Weapon", "default": "Piranha burst cannon", "options": ["Piranha fusion blaster"]}]}, "Broadside Battlesuits": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Heavy rail rifle", "options": ["High-yield missile pods"]}]}, "Riptide Battlesuit": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Heavy burst cannon", "options": ["Ion accelerator"]}]}, "Hammerhead Gunship": {"slots": [{"type": "choice", "label": "Turret weapon", "default": "Railgun", "options": ["Ion cannon"]}]}, "Ghostkeel Battlesuit": {"slots": [{"type": "choice", "label": "Primary weapon", "default": "Fusion collider", "options": ["Cyclic ion raker"]}]}, "Stormsurge": {"slots": [{"type": "choice", "label": "Main cannon", "default": "Pulse Driver Cannon", "options": ["Pulse blast cannon"]}]}};
+// Detachment rule descriptions. detachmentName -> text.
+const DETACHMENT_DESC = {"Kauyon": "During the third, fourth, and fifth battle rounds, ranged weapons equipped by T’au Empire models from your army have the [SUSTAINED HITS 1] ability. During the third, fourth and fifth battle rounds, while a unit is a Guided unit (see For the Greater Good), each time a ranged attack is made by a model in that unit that targets a Spotted unit, you can ignore any or all modifiers to that attack’s Ballistic skill characteristics and/or all modifiers to the Hit roll.", "Mont'ka": "During the first, second and third battle rounds, ranged weapons equipped by T’au Empire models from your army have the [ASSAULT] ability. During the first, second and third battle rounds, while a unit is a Guided unit (see For the Greater Good), its ranged weapons have the [LETHAL HITS] ability.", "Retaliation Cadre": "Each time a T'au Empire Battlesuit model from your army makes a ranged attack that targets a unit within 12\", improve the Strength characteristic of that attack by 1. If that attack targets a unit within 9\", improve the Armour Penetration characteristic of that attack by 1 as well.", "Kroot Hunting Pack": "Each time a Kroot model from your army makes an attack, add 1 to the Hit roll if the target of that attack is below its Starting Strength, and add 1 to the Wound roll as well if the target of that attack is Below Half-strength.", "Auxiliary Cadre": "Kroot and Vespid Stingwings units from your army have the following ability:\n\nTargeting Triangulation (Aura): While an enemy unit is within 9\" of and visible to this unit, each time a ranged attack made by a friendly T’au Empire model (excluding Kroot, Vespid Stingwings and TITANIC models) targets that enemy unit, improve the Armour Penetration characteristic of that attack by 1.\n\nT’au Empire units (excluding Kroot and Vespid Stingwings units) from your army have the following ability:\n\nLocalised Stealth Projectors (Aura): While a friendly Kroot or Vespid Stingwings unit is wholly within 6\" of and visible to this unit, that Kroot or Vespid Stingwings unit can only be selected as the target of a ranged attack if the attacking model is within 18\".", "Experimental Prototype Cadre": "Add 6\" to the Range characteristic of ranged weapons equipped by T'au Empire models from your army."};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1191,12 +1193,14 @@ function renderDetachments(){
   selectedDets().forEach(d => {
     const chip = document.createElement('span');
     chip.className = 'det-chip';
+    chip.title = 'Click for detachment rule';
     chip.innerHTML = '<span>' + d.name + '</span>' +
       '<span class="dp">' + d.dp + 'DP</span>' +
       '<span class="disp">' + d.disp + '</span>' +
       (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
       '<span class="x" title="Remove">✕</span>';
-    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    chip.querySelector('.x').onclick = (e) => { e.stopPropagation(); removeDetachment(d.name); };
+    chip.onclick = (e) => { if(!e.target.classList.contains('x')) openDetachmentInfo(d.name); };
     list.appendChild(chip);
   });
   const sel = document.getElementById('detAdd');
@@ -1207,6 +1211,26 @@ function renderDetachments(){
   const ro = document.getElementById('dpReadout');
   ro.textContent = 'DP ' + used + ' / ' + budget;
   ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+function openDetachmentInfo(name){
+  const d = getDet(name); if(!d) return;
+  document.getElementById('modalCat').textContent = d.dp + ' DP · ' + d.disp + (d.unique ? ' · UNIQUE: ' + d.unique : '');
+  document.getElementById('modalName').textContent = d.name;
+  const body = document.getElementById('modalBody'); body.innerHTML = '';
+  const div = document.createElement('div');
+  div.style.cssText = 'white-space:pre-wrap;font-size:13px;line-height:1.5;color:var(--text);';
+  div.textContent = DETACHMENT_DESC[name] || 'Detachment rule description not available yet for this faction.';
+  body.appendChild(div);
+  if(d.enh && d.enh.length){
+    const h = document.createElement('div'); h.className = 'section-title'; h.textContent = 'Enhancements'; body.appendChild(h);
+    d.enh.forEach(e => {
+      const r = document.createElement('div'); r.className = 'modal-note';
+      r.textContent = e.name + ' — ' + e.cost + ' pts' + (e.upgrade ? '  [Upgrade]' : '');
+      body.appendChild(r);
+    });
+  }
+  const add = document.getElementById('modalAdd'); add.style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- unit / character helpers -------------------------------------- */

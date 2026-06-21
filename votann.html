@@ -911,6 +911,8 @@ const UNIT_RESTRICTIONS = {};
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
 const LOADOUTS = {"Kâhl": {"slots": [{"type": "choice", "label": "Ranged weapon", "default": "Autoch-pattern combi-bolter", "options": ["Volkanite disintegrator"]}, {"type": "choice", "label": "Melee weapon", "default": "Forgewrought plasma axe", "options": ["Mass gauntlet"]}]}, "Einhyr Champion": {"slots": [{"type": "choice", "label": "Melee weapon", "default": "Mass hammer", "options": ["Darkstar axe"]}]}, "Einhyr Hearthguard": {"slots": [{"type": "choice", "label": "Ranged weapon", "default": "EtaCarn plasma gun", "options": ["Volkanite disintegrator"]}, {"type": "choice", "label": "Melee weapon", "default": "Concussion gauntlet", "options": ["Plasma blade gauntlet"]}]}, "Sagitaur": {"slots": [{"type": "choice", "label": "Turret weapon", "default": "HYLas beam cannon", "options": ["Sagitaur missile launcher"]}]}, "Brôkhyr Thunderkyn": {"slots": [{"type": "choice", "label": "Weapon", "default": "Bolt cannon", "options": ["Graviton blast cannon", "SP conversion beamer"]}]}, "Ironkin Steeljacks With Melee Weapons": {"slots": [{"type": "choice", "label": "Melee weapon", "default": "Plasma sword", "options": ["Concussion gauntlet"]}]}};
+// Detachment rule descriptions. detachmentName -> text.
+const DETACHMENT_DESC = {"Hearthband": "Each time a Leagues of Votann model from your army makes an attack with a weapon that targets the closest eligible target or a target that is within Engagement Range of that model’s unit: \n- Re‑roll a Wound roll of 1. \n- If your unit is a Kâhl, Einhyr Hearthguard or Ûthar the Destined unit, improve the Armour Penetration characteristic of that attack by 1.", "Persecution Prospect": "Leagues of Votann units from your army have the following ability:\n\nGuerrilla Adepts: In your Shooting phase, just after this unit is selected to shoot, this unit can use this ability. If it does, select one enemy unit (excluding Monsters and Vehicles). Until the end of the phase, attacks made by models in this unit can only attack that enemy unit (and only if it is an eligible target) and, after resolving those attacks, if one or more of those attacks hit that enemy unit, until the start of your next Shooting phase, that enemy unit is assailed (this simply labels that unit for the purposes of this ability and some Enhancements or Stratagems). If that unit is already assailed, until the start of your next Shooting phase, it is also pinned. While a unit is pinned, subtract 2\" from its Move characteristic and subtract 2 from Charge rolls made for it.", "Needgaârd Oathband": "Each time an enemy unit is destroyed, you gain 1YP.", "Hearthfyre Arsenal": "At the end of your Command phase, you gain 1YP for each objective marker you control that is not within your deployment zone and has one or more Iron-Master and/or Memnyr Strategist models from your army within range of it (to a maximum of 2YP gained from this Detachment rule per turn).\n\nIn your Shooting phase, each time a Brôkhyr, Ironkin Steeljacks or Arkanyst Evaluator unit from your army is selected to shoot, you can spend 1YP. If you do, until the end of the phase, each time a model in that unit makes an attack, re-roll a Hit roll of 1.", "Dêlve Assault Shift": "Cthonian Beserks units from your army have the Deep Strike ability.", "Brandfast Oathband": "Leagues of Votann Transport units from your army have the following ability:\n\nFirebase Control (Aura): While a friendly Leagues of Votann Infantry unit is wholly within 6\" of this Transport, ranged weapons equipped by models in that Infantry unit have the [sustained hits 1] ability.", "Mercenary Oathband": "Your Leagues of Votann units do not have the Hostile Acquisition or Fortify Takeover abilities except as described in this rule. At the start of the battle, your Leagues of Votann units have the Hostile Acquisition ability. At the end of your Command phase, you can spend 3YP. If you do, Leagues of Votann units from your army lose the Hostile Acquisition ability and gain the Fortify Takeover ability, or vice versa."};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1268,12 +1270,14 @@ function renderDetachments(){
   selectedDets().forEach(d => {
     const chip = document.createElement('span');
     chip.className = 'det-chip';
+    chip.title = 'Click for detachment rule';
     chip.innerHTML = '<span>' + d.name + '</span>' +
       '<span class="dp">' + d.dp + 'DP</span>' +
       '<span class="disp">' + d.disp + '</span>' +
       (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
       '<span class="x" title="Remove">✕</span>';
-    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    chip.querySelector('.x').onclick = (e) => { e.stopPropagation(); removeDetachment(d.name); };
+    chip.onclick = (e) => { if(!e.target.classList.contains('x')) openDetachmentInfo(d.name); };
     list.appendChild(chip);
   });
   const sel = document.getElementById('detAdd');
@@ -1284,6 +1288,26 @@ function renderDetachments(){
   const ro = document.getElementById('dpReadout');
   ro.textContent = 'DP ' + used + ' / ' + budget;
   ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+function openDetachmentInfo(name){
+  const d = getDet(name); if(!d) return;
+  document.getElementById('modalCat').textContent = d.dp + ' DP · ' + d.disp + (d.unique ? ' · UNIQUE: ' + d.unique : '');
+  document.getElementById('modalName').textContent = d.name;
+  const body = document.getElementById('modalBody'); body.innerHTML = '';
+  const div = document.createElement('div');
+  div.style.cssText = 'white-space:pre-wrap;font-size:13px;line-height:1.5;color:var(--text);';
+  div.textContent = DETACHMENT_DESC[name] || 'Detachment rule description not available yet for this faction.';
+  body.appendChild(div);
+  if(d.enh && d.enh.length){
+    const h = document.createElement('div'); h.className = 'section-title'; h.textContent = 'Enhancements'; body.appendChild(h);
+    d.enh.forEach(e => {
+      const r = document.createElement('div'); r.className = 'modal-note';
+      r.textContent = e.name + ' — ' + e.cost + ' pts' + (e.upgrade ? '  [Upgrade]' : '');
+      body.appendChild(r);
+    });
+  }
+  const add = document.getElementById('modalAdd'); add.style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- unit / character helpers -------------------------------------- */

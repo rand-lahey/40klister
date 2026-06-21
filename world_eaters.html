@@ -911,6 +911,8 @@ const UNIT_RESTRICTIONS = {"Bloodthirster": "Khorne Daemonkin", "Skarbrand": "Kh
 // Per-unit weapon loadouts. unitName -> {default, options:[{name, cap:[[minModels,maxQty],...]}]}.
 // Each model carries one weapon from the slot; capped options are limited (scaling with model count).
 const LOADOUTS = {"Chaos Terminators": {"slots": [{"type": "choice", "label": "Melee weapon", "default": "Accursed weapon", "options": ["Power fist", "Chainfist", "Paired accursed weapons"]}]}, "Jakhals": {"slots": [{"type": "choice", "label": "Dishonoured weapon", "default": "Paired manglers", "options": ["Skullsmasher and mangler"]}]}, "Forgefiend": {"slots": [{"type": "choice", "label": "Head weapon", "default": "Forgefiend jaws", "options": ["Forgefiend claws"]}]}, "Maulerfiend": {"slots": [{"type": "choice", "label": "Head weapon", "default": "Lasher tendrils", "options": ["Magma cutter"]}]}, "Helbrute": {"slots": [{"type": "choice", "label": "Ranged weapon", "default": "Multi-melta", "options": ["Twin autocannon", "Plasma cannon"]}, {"type": "choice", "label": "Arm weapon", "default": "Missile launcher", "options": ["Helbrute hammer", "Power scourge"]}]}, "Khorne Lord Of Skulls": {"slots": [{"type": "choice", "label": "Gatling weapon", "default": "Hades gatling cannon", "options": ["Skullhurler"]}, {"type": "choice", "label": "Cannon", "default": "Gorestorm cannon", "options": ["Daemongore cannon", "Ichor cannon"]}]}, "Bloodthirster": {"slots": [{"type": "choice", "label": "Weapon", "default": "Great axe of Khorne", "options": ["Bloodflail", "Lash of Khorne"]}]}};
+// Detachment rule descriptions. detachmentName -> text.
+const DETACHMENT_DESC = {"Berzerker Warband": "Each time a World Eaters unit from your army makes a Charge move, until the end of the turn, add 1 to the Attacks characteristic and add 2 to the Strength characteristic of melee weapons equipped by models in that unit.", "Vessels of Wrath": "At the start of the battle round, after activating Blessings of Khorne, you can select one or more models from your army from those listed below (including models that are embarked within Transports): \n- WORLD EATERS CHARACTER (excluding EPIC HEROES) \n- Eightbound Champion \n- Exalted Eightbound Champion \n- Khorne Berzerker Champion \n- World Eaters Terminator Champion \n\n\nYou can select the same type of model multiple times. The maximum number of models you can select depends on the battle size, as follows: \n\n\nINCURSION: 2 MODELS\nSTRIKE FORCE: 3 MODELS\nONSLAUGHT: 4 MODELS \n\n\nUntil the end of the battle round, each of those models has the VESSEL OF WRATH keyword (we recommend marking such models with a suitable token). Then, select one Blessing of Khorne that is not currently active for your army. Until the end of the battle round, that Blessing of Khorne is active for VESSEL OF WRATH units from your army in addition to any others that are active for your army.", "Cult of Blood": "At the start of your Command phase, you can select one of the Idols of Khorne abilities listed below. Until the start of your next Command phase, that ability is active, and its effects apply to all World Eaters Titanic and World Eaters Monster units from your army. You can only select each Idols of Khorne ability once per battle.\n\n\nIdol of Infinite Rage (Aura)\nWhile a friendly Jakhals or Goremongers unit is within 6\" of this model (or within 9\" if this model is Titanic), each time a model in that unit makes an attack, add 1 to the Hit roll and add 1 to the Wound roll.\n\n\nIdol of Burning Wrath (Aura)\nWhile a friendly Jakhals or Goremongers unit is within 6\" of this model (or within 9\" if this model is Titanic), add 1\" to the Movement characteristic of models in that unit and add 1 to Advance and Charge rolls made for that unit.\n\n\nIdol of Blessed Blood (Aura)\nWhile a friendly Jakhals or Goremongers unit is within 6\" of this model (or within 9\" if this model is Titanic), models in that unit have a 4+ invulnerable save.\n\n\nJakhals or Goremongers units from your army have the Battleline keyword.", "Khorne Daemonkin": "Each time a Blood Legions or World Eaters unit from your army destroys an enemy unit, roll one D6; on a 3+, you gain 1 Blood Tithe point (BTP). At the start of the Command phase, you can spend 1 or more of your BTP to activate one of the following abilities until the end of the battle.\n\n\nEnraged Abjuration [2BTP]\nBlood Legions and World Eaters models from your army have the Feel No Pain 5+ ability against Psychic Attacks and mortal wounds.\n\n\nDaemonic Rage [3BTP]\nMelee weapons equipped by Blood Legions units from your army have the [Lance] ability.\n\n\nBoon of Blood [4BTP]\nBlood Legions units from your army have a 4+ invulnerable save.\n\n\nMight of Khorne [5BTP]\nBlood Legions units from your army gain the Blessings of Khorne ability.", "Possessed Slaughterband": "World Eaters Possessed units in your army have the following ability:\n\n\nBrazen Fury: In your opponent's Shooting phase, each time an enemy unit has shot, if any models from this unit were destroyed as a result of those attacks, this unit can make a Brazen Fury move. To do so, roll one D6: models in this unit move a number of inches up to the result of this roll, but this unit must end that move as close as possible to the closest enemy unit (excluding Aircraft). When doing so, those models can be moved within Engagement Range of that enemy unit. This unit cannot make a Brazen Fury move while Battle-shocked or within Engagement Range of one or more enemy units, and can only make one Brazen Fury move per phase.", "Goretrack Onslaught": "Each time a World Eaters unit from your army disembarks from a Transport, until then end of the turn, add 1 to Charge rolls made for that unit and that unit's melee weapons have the [Lance] ability."};
 
 // dp = Detachment Point cost; disp = Force Disposition; unique = shared keyword.
 // enh entries: {name, cost, upgrade?, elig?}. `upgrade:true` = goes on a non-Character unit.
@@ -1196,12 +1198,14 @@ function renderDetachments(){
   selectedDets().forEach(d => {
     const chip = document.createElement('span');
     chip.className = 'det-chip';
+    chip.title = 'Click for detachment rule';
     chip.innerHTML = '<span>' + d.name + '</span>' +
       '<span class="dp">' + d.dp + 'DP</span>' +
       '<span class="disp">' + d.disp + '</span>' +
       (d.unique ? '<span class="uni">' + d.unique + '</span>' : '') +
       '<span class="x" title="Remove">✕</span>';
-    chip.querySelector('.x').onclick = () => removeDetachment(d.name);
+    chip.querySelector('.x').onclick = (e) => { e.stopPropagation(); removeDetachment(d.name); };
+    chip.onclick = (e) => { if(!e.target.classList.contains('x')) openDetachmentInfo(d.name); };
     list.appendChild(chip);
   });
   const sel = document.getElementById('detAdd');
@@ -1212,6 +1216,26 @@ function renderDetachments(){
   const ro = document.getElementById('dpReadout');
   ro.textContent = 'DP ' + used + ' / ' + budget;
   ro.className = 'dp-readout' + (used > budget ? ' over' : '');
+}
+function openDetachmentInfo(name){
+  const d = getDet(name); if(!d) return;
+  document.getElementById('modalCat').textContent = d.dp + ' DP · ' + d.disp + (d.unique ? ' · UNIQUE: ' + d.unique : '');
+  document.getElementById('modalName').textContent = d.name;
+  const body = document.getElementById('modalBody'); body.innerHTML = '';
+  const div = document.createElement('div');
+  div.style.cssText = 'white-space:pre-wrap;font-size:13px;line-height:1.5;color:var(--text);';
+  div.textContent = DETACHMENT_DESC[name] || 'Detachment rule description not available yet for this faction.';
+  body.appendChild(div);
+  if(d.enh && d.enh.length){
+    const h = document.createElement('div'); h.className = 'section-title'; h.textContent = 'Enhancements'; body.appendChild(h);
+    d.enh.forEach(e => {
+      const r = document.createElement('div'); r.className = 'modal-note';
+      r.textContent = e.name + ' — ' + e.cost + ' pts' + (e.upgrade ? '  [Upgrade]' : '');
+      body.appendChild(r);
+    });
+  }
+  const add = document.getElementById('modalAdd'); add.style.display = 'none';
+  document.getElementById('overlay').classList.remove('hidden');
 }
 
 /* ---- unit / character helpers -------------------------------------- */
