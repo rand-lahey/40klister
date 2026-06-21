@@ -1867,7 +1867,7 @@ function renderListsContainer(){
     load.onclick = () => { applyState(L); curListName = n; saveCurrent(); renderArmy(); document.getElementById('listsOverlay').classList.add('hidden'); };
     const del = document.createElement('button');
     del.className = 'tb-btn'; del.textContent = 'Delete';
-    del.onclick = () => { const l = getLists(); delete l[n]; setLists(l); renderListsContainer(); };
+    del.onclick = () => { const l = getLists(); delete l[n]; setLists(l); if(window.cloudDeleteList) cloudDeleteList(n); renderListsContainer(); };
     btns.appendChild(load); btns.appendChild(del);
     row.appendChild(info); row.appendChild(btns);
     c.appendChild(row);
@@ -1880,6 +1880,7 @@ function saveCurrentList(){
   const lists = getLists();
   lists[name] = serialize();
   setLists(lists);
+  if(window.cloudSaveList) cloudSaveList(name, lists[name]);
   saveCurrent();
   renderListsContainer();
   renderArmy();
@@ -2079,6 +2080,71 @@ document.getElementById('shareOverlay').addEventListener('click', e => { if(e.ta
 loadCurrent();
 renderUnitList(document.getElementById('searchInput').value);
 renderArmy();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+  const SUPA_URL = 'https://iikcdaloirkkzwgsvjxe.supabase.co';
+  const SUPA_KEY = 'sb_publishable_HggaGDE-LHaNsvZwasb2Hw_58cGsU-l';
+  const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+  let currentUser = null;
+
+  function renderAuthButton(){
+    let btn = document.getElementById('authBtn');
+    if(!btn){
+      btn = document.createElement('button');
+      btn.id = 'authBtn';
+      btn.className = 'tb-btn';
+      const shareBtn = document.getElementById('shareBtn');
+      shareBtn.parentNode.insertBefore(btn, shareBtn);
+    }
+    if(currentUser){
+      const label = currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
+      btn.textContent = label + ' · Sign out';
+      btn.onclick = () => sb.auth.signOut();
+    } else {
+      btn.textContent = 'Sign in';
+      btn.onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    }
+  }
+
+  async function loadCloudLists(){
+    if(!currentUser) return;
+    const { data } = await sb.from('army_lists').select('name,data').eq('user_id', currentUser.id).eq('faction', FACTION_KEY);
+    if(!data) return;
+    const local = getLists();
+    data.forEach(r => { local[r.name] = r.data; });
+    setLists(local);
+    renderListsContainer();
+  }
+
+  window.cloudSaveList = async function(name, data){
+    if(!currentUser) return;
+    await sb.from('army_lists').upsert(
+      { user_id: currentUser.id, faction: FACTION_KEY, name, data, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,faction,name' }
+    );
+  };
+
+  window.cloudDeleteList = async function(name){
+    if(!currentUser) return;
+    await sb.from('army_lists').delete()
+      .eq('user_id', currentUser.id).eq('faction', FACTION_KEY).eq('name', name);
+  };
+
+  sb.auth.getSession().then(({ data: { session } }) => {
+    currentUser = session?.user ?? null;
+    renderAuthButton();
+    if(currentUser) loadCloudLists();
+  });
+
+  sb.auth.onAuthStateChange((_e, session) => {
+    const wasUser = currentUser;
+    currentUser = session?.user ?? null;
+    renderAuthButton();
+    if(currentUser && !wasUser) loadCloudLists();
+  });
+})();
 </script>
 </body>
 </html>
