@@ -2036,10 +2036,7 @@ renderArmy();
       btn.onclick = () => sb.auth.signOut();
     } else {
       btn.textContent = 'Sign in';
-      btn.onclick = async () => {
-        const { data, error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname, skipBrowserRedirect: true } });
-        alert('URL:\n' + (data && data.url ? data.url : '(none)') + '\n\nERROR:\n' + (error ? error.message : 'none'));
-      };
+      btn.onclick = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     }
   }
 
