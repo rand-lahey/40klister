@@ -1677,8 +1677,15 @@ function renderArmy(){
     container.innerHTML = '';
     const byHost = {};
     army.forEach(e => { if(e.attachedTo){ (byHost[e.attachedTo] = byHost[e.attachedTo] || []).push(e); } });
-    army.forEach(a => {
-      if(a.attachedTo) return;
+    const hosts = army.filter(a => !a.attachedTo).sort((a, b) => {
+      const ua = UNITS.find(u => u.name === a.unitName);
+      const ub = UNITS.find(u => u.name === b.unitName);
+      const ra = UNIT_GROUP_ORDER.indexOf(unitGroupOf(ua || {}));
+      const rb = UNIT_GROUP_ORDER.indexOf(unitGroupOf(ub || {}));
+      if(ra !== rb) return (ra === -1 ? 999 : ra) - (rb === -1 ? 999 : rb);
+      return a.unitName.localeCompare(b.unitName);
+    });
+    hosts.forEach(a => {
       container.appendChild(buildArmyRow(a, false));
       (byHost[a.id] || []).forEach(lead => container.appendChild(buildArmyRow(lead, true)));
     });
