@@ -1489,15 +1489,17 @@ function buildLoadoutUI(body, def, models, lo){
       body.appendChild(note);
       const inputs = []; const sl = lo[i] || {};
       const totalCap = slot.maxTotal ? capFor({ cap: slot.maxTotal }, models) : Infinity;
+      const groupCapOf = g => (slot.groupCaps && slot.groupCaps[g]) ? capFor({ cap: slot.groupCaps[g] }, models) : Infinity;
       (slot.options || []).forEach(opt => {
         const cap = capFor(opt, models);
+        const gcap = opt.group ? groupCapOf(opt.group) : Infinity;
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:10px;margin:10px 0;';
         const label = document.createElement('span');
-        label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '');
+        label.textContent = opt.name + (cap !== Infinity ? ('  (max ' + cap + ')') : '') + (gcap !== Infinity ? ('  [' + opt.group + ': max ' + gcap + ']') : '');
         const inp = document.createElement('input');
         inp.type = 'number'; inp.min = '0'; inp.style.width = '64px';
-        inp.max = (cap === Infinity ? String(models) : String(cap));
+        inp.max = String(Math.min(cap === Infinity ? models : cap, gcap === Infinity ? models : gcap));
         inp.value = Math.min(sl[opt.name] || 0, cap === Infinity ? (sl[opt.name] || 0) : cap);
         row.appendChild(label); row.appendChild(inp); body.appendChild(row);
         inputs.push({ opt, inp, cap });
@@ -1505,12 +1507,19 @@ function buildLoadoutUI(body, def, models, lo){
       const remaining = document.createElement('div'); remaining.className = 'modal-note'; body.appendChild(remaining);
       function update(){
         let sum = 0;
-        inputs.forEach(({ inp, cap }) => {
+        inputs.forEach(({ opt, inp, cap }) => {
           let v = Math.max(0, parseInt(inp.value) || 0);
           if(cap !== Infinity) v = Math.min(v, cap);
           const others = inputs.reduce((s, x) => x.inp === inp ? s : s + Math.max(0, parseInt(x.inp.value) || 0), 0);
           v = Math.min(v, models - others);
           if(totalCap !== Infinity) v = Math.min(v, totalCap - others);
+          if(opt.group){
+            const gc = groupCapOf(opt.group);
+            if(gc !== Infinity){
+              const gOthers = inputs.reduce((s, x) => (x.inp !== inp && x.opt.group === opt.group) ? s + Math.max(0, parseInt(x.inp.value) || 0) : s, 0);
+              v = Math.min(v, gc - gOthers);
+            }
+          }
           if(v < 0) v = 0;
           inp.value = v; sum += v;
         });
